@@ -1,0 +1,11 @@
+node_modules
+.next
+apps/*/node_modules
+apps/*/.next
+apps/*/dist
+packages/*/dist
+.git
+docker-compose.yml
+server-build.log
+web-build.log
+

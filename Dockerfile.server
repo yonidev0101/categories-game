@@ -1,0 +1,25 @@
+FROM node:22-alpine AS builder
+WORKDIR /app
+
+COPY package.json package-lock.json tsconfig.base.json ./
+COPY apps/server/package.json apps/server/tsconfig.json ./apps/server/
+COPY packages/shared/package.json packages/shared/tsconfig.json ./packages/shared/
+COPY apps/server/src ./apps/server/src
+COPY packages/shared/src ./packages/shared/src
+
+RUN npm ci
+RUN npm --workspace @categories-game/server run build
+
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=builder /app/package.json /app/package-lock.json /app/tsconfig.base.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
+COPY --from=builder /app/apps/server/src ./apps/server/src
+COPY --from=builder /app/apps/server/tsconfig.json ./apps/server/tsconfig.json
+COPY --from=builder /app/packages/shared ./packages/shared
+
+EXPOSE 4000
+CMD ["node", "--import", "tsx", "apps/server/src/index.ts"]

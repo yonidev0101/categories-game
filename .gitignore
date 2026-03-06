@@ -1,0 +1,12 @@
+node_modules
+.next
+dist
+.turbo
+.env
+.env.local
+coverage
+.DS_Store
+*.log
+.claude/
+server-build.log
+web-build.log
