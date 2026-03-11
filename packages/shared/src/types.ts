@@ -73,6 +73,7 @@ export interface ValidatedAnswer {
   score: number;
   reason: string;
   confidence: number;
+  isHostOverride?: boolean;
 }
 
 export interface ScoreBreakdown {

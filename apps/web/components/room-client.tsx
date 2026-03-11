@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import {
   useCallback, useEffect, useMemo, useRef, useState,
   type ChangeEvent, type CSSProperties, type MutableRefObject
 } from "react";
-import type { RoomSettings, RoomStateSnapshot, ScoreBreakdown, SubmissionPayload, ValidatedAnswer } from "@categories-game/shared";
+import { normalizeHebrew, type RoomSettings, type RoomStateSnapshot, type ScoreBreakdown, type SubmissionPayload, type ValidatedAnswer } from "@categories-game/shared";
 import { getRoomState, rerollRoomLetters, startRoom, updateRoomSettings } from "../lib/api";
 import { getSocket } from "../lib/socket";
 import { readSession } from "../lib/storage";
@@ -191,7 +191,7 @@ function playTick(ref: MutableRefObject<AudioContext | null>, freq: number, type
 // ─── Data helpers ─────────────────────────────────────────────────
 interface CompareRow {
   categoryId: string; categoryLabel: string;
-  cells: { playerId: string; nickname: string; answer: string; score: number; isValid: boolean; isDuplicate: boolean }[];
+  cells: { playerId: string; nickname: string; answer: string; score: number; isValid: boolean; isDuplicate: boolean; isHostOverride: boolean }[];
 }
 
 function buildCompareRows(snapshot: RoomStateSnapshot): CompareRow[] {
@@ -718,6 +718,39 @@ export function RoomClient({ roomCode }: { roomCode: string }) {
                         <StatusPill tone={cell.isValid ? "success" : "danger"}>{cell.score} נק'</StatusPill>
                         {cell.score === 15 && cell.isValid ? <StatusPill tone="accent">⭐ ייחודי</StatusPill> : null}
                         {cell.isDuplicate ? <StatusPill tone="warning">כפול</StatusPill> : null}
+                        {cell.isHostOverride ? <StatusPill tone="warning">✓ מארח</StatusPill> : null}
+                        {isHost && cell.answer ? (
+                          <div className="host-control-group">
+                            <button
+                              type="button"
+                              className={`host-control-btn host-control-valid${cell.isValid && cell.score === 10 && !cell.isDuplicate ? " host-control-active" : ""}`}
+                              onClick={() => socketRef.current.emit("host_update_answer", { roomCode, targetPlayerId: cell.playerId, categoryId: row.categoryId, outcome: "valid_normal" })}
+                            >
+                              נכון
+                            </button>
+                            <button
+                              type="button"
+                              className={`host-control-btn host-control-duplicate${cell.isValid && cell.score === 5 ? " host-control-active" : ""}`}
+                              onClick={() => socketRef.current.emit("host_update_answer", { roomCode, targetPlayerId: cell.playerId, categoryId: row.categoryId, outcome: "valid_duplicate" })}
+                            >
+                              כפול
+                            </button>
+                            <button
+                              type="button"
+                              className={`host-control-btn host-control-unique${cell.isValid && cell.score === 15 ? " host-control-active" : ""}`}
+                              onClick={() => socketRef.current.emit("host_update_answer", { roomCode, targetPlayerId: cell.playerId, categoryId: row.categoryId, outcome: "valid_unique" })}
+                            >
+                              ⭐ ייחודי
+                            </button>
+                            <button
+                              type="button"
+                              className={`host-control-btn host-control-invalid${!cell.isValid ? " host-control-active" : ""}`}
+                              onClick={() => socketRef.current.emit("host_update_answer", { roomCode, targetPlayerId: cell.playerId, categoryId: row.categoryId, outcome: "invalid" })}
+                            >
+                              לא נכון
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   ))}
@@ -767,3 +800,6 @@ export function RoomClient({ roomCode }: { roomCode: string }) {
 
   return null;
 }
+
+
+

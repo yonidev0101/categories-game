@@ -9,8 +9,8 @@ const heebo = Heebo({
 });
 
 export const metadata = {
-  title: "Categories Game",
-  description: "Realtime multiplayer categories game"
+  title: "ארץ עיר אונליין — משחק קטגוריות מולטיפלייר",
+  description: "משחק ארץ עיר מולטיפלייר בזמן אמת עם AI. צור חדר, הזמן חברים, ותתחרו על ניקוד!",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

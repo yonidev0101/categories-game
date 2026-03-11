@@ -12,6 +12,7 @@ import {
   rankPlayers,
   scoreAnswers,
   totalScore,
+  type AIValidationResult,
   type CreateRoomInput,
   type RoomSettings,
   type RoomStateSnapshot,
@@ -49,6 +50,7 @@ interface StoredRoom {
   round: RoundSnapshot | null;
   scoreboard: ScoreBreakdown[];
   submissions: Map<string, Record<string, string>>;
+  createdAt: string;
 }
 
 interface GameEvents {
@@ -90,7 +92,8 @@ export class GameService {
       players: [hostPlayer],
       round: null,
       scoreboard: [],
-      submissions: new Map()
+      submissions: new Map(),
+      createdAt: new Date().toISOString(),
     };
 
     this.rooms.set(room.code, room);
@@ -240,9 +243,111 @@ export class GameService {
     this.emitRoomState(room.code);
   }
 
+  async resetRoom(roomCode: string, playerId: string) {
+    const room = this.getRoomOrThrow(roomCode);
+    this.assertHost(room, playerId);
+    if (room.phase !== "game_over") {
+      throw new Error("ניתן לאפס רק לאחר סיום המשחק");
+    }
+
+    this.clearCountdown(room.code);
+    room.phase = "lobby";
+    room.currentRoundNumber = 0;
+    room.activeLetter = null;
+    room.activeLetters = [];
+    room.countdownEndsAt = null;
+    room.roundEndsAt = null;
+    room.round = null;
+    room.scoreboard = [];
+    room.submissions = new Map();
+
+    for (const player of room.players) {
+      player.score = 0;
+      player.progressCount = 0;
+      player.hasFinishedRound = false;
+      player.isReady = player.isHost;
+    }
+
+    await this.persistRoom(this.toSnapshot(room, playerId));
+    this.emitRoomState(room.code);
+  }
+
+  async hostOverrideAnswer(roomCode: string, hostPlayerId: string, targetPlayerId: string, categoryId: string) {
+    const room = this.getRoomOrThrow(roomCode);
+    this.assertHost(room, hostPlayerId);
+
+    if (room.phase !== "round_results" && room.phase !== "game_over") {
+      throw new Error("ניתן לאשר תשובות רק לאחר סיום הסיבוב");
+    }
+
+    const entry = room.scoreboard.find((s) => s.playerId === targetPlayerId);
+    if (!entry) throw new Error("שחקן לא נמצא");
+
+    const answer = entry.answers.find((a) => a.categoryId === categoryId);
+    // Only override answers that: exist, are not already valid, passed the letter rule
+    if (!answer || answer.isValid || !answer.isRuleValid) return;
+
+    // Recalculate the correct score using the stored submission maps
+    const allSubmissions = Array.from(room.submissions.values());
+    const duplicateMap = computeDuplicateMap(allSubmissions, room.settings.categories);
+    const categoryPresenceMap = computeCategoryPresenceMap(allSubmissions, room.settings.categories);
+
+    const answeredCount = categoryPresenceMap.get(categoryId) ?? 0;
+    const isDuplicate =
+      answer.normalizedAnswer.length > 0 &&
+      (duplicateMap.get(`${categoryId}:${answer.normalizedAnswer}`) ?? 0) > 1;
+    const newScore = answeredCount <= 1 ? 15 : isDuplicate ? 5 : 10;
+
+    // Apply override
+    answer.isCategoryFit = true;
+    answer.isValid = true;
+    answer.isDuplicate = isDuplicate;
+    answer.score = newScore;
+    answer.isHostOverride = true;
+    answer.reason = "אושר ידנית על ידי המארח";
+
+    entry.totalScore += newScore;
+
+    const player = room.players.find((p) => p.id === targetPlayerId);
+    if (player) player.score += newScore;
+
+    room.players = rankPlayers(room.players);
+    await this.persistRoom(this.toSnapshot(room, hostPlayerId));
+    this.emitRoomState(room.code);
+  }
+
   async getRoomState(roomCode: string, playerId?: string | null): Promise<RoomStateSnapshot> {
     const room = this.getRoomOrThrow(roomCode);
     return this.toSnapshot(room, playerId ?? null);
+  }
+
+  getAdminStats() {
+    const rooms = Array.from(this.rooms.values());
+    return {
+      totalRooms: rooms.length,
+      activeRooms: rooms.filter((r) => r.phase !== "game_over").length,
+      totalPlayers: rooms.reduce((sum, r) => sum + r.players.length, 0),
+      onlinePlayers: rooms.reduce((sum, r) => sum + r.players.filter((p) => p.isOnline).length, 0),
+      generatedAt: new Date().toISOString(),
+      rooms: rooms
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .map((r) => ({
+          code: r.code,
+          phase: r.phase,
+          mode: r.settings.mode,
+          currentRoundNumber: r.currentRoundNumber,
+          roundsCount: r.settings.roundsCount,
+          playerCount: r.players.length,
+          onlineCount: r.players.filter((p) => p.isOnline).length,
+          createdAt: r.createdAt,
+          players: r.players.map((p) => ({
+            nickname: p.nickname,
+            isHost: p.isHost,
+            isOnline: p.isOnline,
+            score: p.score,
+          })),
+        })),
+    };
   }
 
   findPlayerBySession(roomCode: string, sessionToken: string) {
@@ -325,32 +430,55 @@ export class GameService {
     this.events.onAnswersLocked?.(room.code);
     this.emitRoomState(room.code);
 
-    const duplicateMap = computeDuplicateMap(Array.from(room.submissions.values()), room.settings.categories);
-    const categoryPresenceMap = computeCategoryPresenceMap(Array.from(room.submissions.values()), room.settings.categories);
+    const allSubmissions = Array.from(room.submissions.values());
+    const duplicateMap = computeDuplicateMap(allSubmissions, room.settings.categories);
+    const categoryPresenceMap = computeCategoryPresenceMap(allSubmissions, room.settings.categories);
+
+    // ONE batched AI call for all players instead of one per player
+    const submissionEntries = room.players.map((p) => ({
+      playerId: p.id,
+      answers: room.submissions.get(p.id) ?? {},
+    }));
+
+    let validationByPlayer: Map<string, AIValidationResult[]>;
+    let rawResponse: unknown = { fallback: true };
+
+    try {
+      const result = await this.aiValidator.validateAllSubmissions({
+        letter: room.round.letter,
+        mode: room.settings.mode,
+        categories: room.settings.categories,
+        submissions: submissionEntries,
+      });
+      validationByPlayer = result.byPlayer;
+      rawResponse = result.rawResponse;
+    } catch (err) {
+      console.error("AI validation failed, using fallback:", err);
+      rawResponse = { fallback: true, reason: String(err) };
+      // Fallback: non-empty answer → treat as valid category fit
+      validationByPlayer = new Map(
+        room.players.map((p) => {
+          const answers = room.submissions.get(p.id) ?? {};
+          return [p.id, room.settings.categories.map((cat) => ({
+            categoryId:    cat.id,
+            isCategoryFit: (answers[cat.id] ?? "").trim().length > 0,
+            confidence:    0.5,
+            reason:        "fallback — שגיאת AI",
+          }))];
+        }),
+      );
+    }
+
     const scoreboard: ScoreBreakdown[] = [];
 
     for (const player of room.players) {
       const answers = room.submissions.get(player.id) ?? {};
-      let aiResults = room.settings.categories.map((category) => ({
-        categoryId: category.id,
-        isCategoryFit: !!answers[category.id],
-        confidence: 0.5,
-        reason: "לא הוגשה תשובה או שבוצע fallback"
+      const aiResults = validationByPlayer.get(player.id) ?? room.settings.categories.map((cat) => ({
+        categoryId:    cat.id,
+        isCategoryFit: (answers[cat.id] ?? "").trim().length > 0,
+        confidence:    0.5,
+        reason:        "fallback",
       }));
-      let rawResponse: unknown = { fallback: true };
-
-      try {
-        const validation = await this.aiValidator.validateBatch({
-          letter: room.round.letter,
-          mode: room.settings.mode,
-          categories: room.settings.categories,
-          answers
-        });
-        aiResults = validation.results;
-        rawResponse = validation.rawResponse;
-      } catch {
-        rawResponse = { fallback: true, reason: "validation_failed" };
-      }
 
       const validatedAnswers = scoreAnswers({
         answers,
@@ -359,7 +487,7 @@ export class GameService {
         letter: room.round.letter,
         mode: room.settings.mode,
         duplicateMap,
-        categoryPresenceMap
+        categoryPresenceMap,
       });
       const total = totalScore(validatedAnswers);
       player.score += total;
@@ -367,19 +495,20 @@ export class GameService {
         playerId: player.id,
         roundNumber: room.currentRoundNumber,
         totalScore: total,
-        answers: validatedAnswers
-      });
-
-      await this.mongo.saveValidationLog({
-        roomId: room.id,
-        roundNumber: room.currentRoundNumber,
-        playerId: player.id,
-        model: process.env.OPENAI_MODEL ?? "gpt-4.1-mini",
-        promptVersion: "v1",
-        rawResponse,
-        finalizedAt: new Date().toISOString()
+        answers: validatedAnswers,
       });
     }
+
+    // One log entry for the whole round
+    await this.mongo.saveValidationLog({
+      roomId: room.id,
+      roundNumber: room.currentRoundNumber,
+      playerId: "batch",
+      model: process.env.OPENAI_MODEL ?? "gpt-4.1-mini",
+      promptVersion: "v2-batch",
+      rawResponse,
+      finalizedAt: new Date().toISOString(),
+    });
 
     room.scoreboard = scoreboard;
     room.players = rankPlayers(room.players);

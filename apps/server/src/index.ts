@@ -46,6 +46,15 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+app.get("/admin/stats", (req, res) => {
+  const secret = serverConfig.adminSecret;
+  if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+  res.json(gameService.getAdminStats());
+});
+
 app.post("/rooms", async (req, res) => {
   try {
     const body = req.body as CreateRoomInput;
@@ -155,6 +164,22 @@ io.on("connection", (socket) => {
   socket.on("start_next_round", async ({ roomCode }: { roomCode: string }) => {
     try {
       await gameService.startNextRound(roomCode.toUpperCase(), String(socket.data.playerId));
+    } catch (error) {
+      socket.emit("error_message", { message: getErrorMessage(error) });
+    }
+  });
+
+  socket.on("reset_room", async ({ roomCode }: { roomCode: string }) => {
+    try {
+      await gameService.resetRoom(roomCode.toUpperCase(), String(socket.data.playerId));
+    } catch (error) {
+      socket.emit("error_message", { message: getErrorMessage(error) });
+    }
+  });
+
+  socket.on("host_override_answer", async ({ roomCode, targetPlayerId, categoryId }: { roomCode: string; targetPlayerId: string; categoryId: string }) => {
+    try {
+      await gameService.hostOverrideAnswer(roomCode.toUpperCase(), String(socket.data.playerId), targetPlayerId, categoryId);
     } catch (error) {
       socket.emit("error_message", { message: getErrorMessage(error) });
     }

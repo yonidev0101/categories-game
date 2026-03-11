@@ -53,18 +53,30 @@ export function formatRoundLetters(letters: string[]): string {
   return letters.join(" + ");
 }
 
+const HEBREW_FINAL_MAP: Record<string, string> = {
+  "ך": "כ",
+  "ם": "מ",
+  "ן": "נ",
+  "ף": "פ",
+  "ץ": "צ",
+};
+
+export function normalizeHebrew(value: string): string {
+  return value.replace(/[ךםןףץ]/g, (char) => HEBREW_FINAL_MAP[char] ?? char).toLocaleLowerCase("he");
+}
+
 export function normalizeAnswer(value: string): string {
-  return value.trim().replace(/\s+/g, " ").toLocaleLowerCase("he");
+  return normalizeHebrew(value.trim().replace(/\s+/g, " "));
 }
 
 function parseRequiredLetters(letter: string, mode: GameMode): string[] {
   if (mode === "classic") {
-    return [letter.trim().toLocaleLowerCase("he")].filter(Boolean);
+    return [normalizeHebrew(letter.trim())].filter(Boolean);
   }
 
   return letter
     .split("+")
-    .map((item) => item.trim().toLocaleLowerCase("he"))
+    .map((item) => normalizeHebrew(item.trim()))
     .filter(Boolean);
 }
 
