@@ -1,4 +1,4 @@
-import {
+﻿import {
   buildPlayerProgress,
   computeCategoryPresenceMap,
   computeDuplicateMap,
@@ -52,6 +52,8 @@ interface StoredRoom {
   submissions: Map<string, Record<string, string>>;
   createdAt: string;
 }
+
+type HostAnswerOutcome = "valid_normal" | "valid_duplicate" | "valid_unique" | "invalid";
 
 interface GameEvents {
   onRoomState?: (roomCode: string, snapshot: RoomStateSnapshot) => void;
@@ -272,7 +274,7 @@ export class GameService {
     this.emitRoomState(room.code);
   }
 
-  async hostOverrideAnswer(roomCode: string, hostPlayerId: string, targetPlayerId: string, categoryId: string) {
+    async hostOverrideAnswer(roomCode: string, hostPlayerId: string, targetPlayerId: string, categoryId: string) {
     const room = this.getRoomOrThrow(roomCode);
     this.assertHost(room, hostPlayerId);
 
@@ -280,6 +282,59 @@ export class GameService {
       throw new Error("ניתן לאשר תשובות רק לאחר סיום הסיבוב");
     }
 
+    const entry = room.scoreboard.find((s) => s.playerId === targetPlayerId);
+    if (!entry) throw new Error("שחקן לא נמצא");
+
+    const answer = entry.answers.find((a) => a.categoryId === categoryId);
+    // Only override answers that: exist, are not already valid, passed the letter rule
+    if (!answer || answer.isValid || !answer.isRuleValid) return;
+
+    await this.hostSetAnswerOutcome(roomCode, hostPlayerId, targetPlayerId, categoryId, "valid_normal");
+  }
+
+  async hostSetAnswerOutcome(
+    roomCode: string,
+    hostPlayerId: string,
+    targetPlayerId: string,
+    categoryId: string,
+    outcome: HostAnswerOutcome
+  ) {
+    const room = this.getRoomOrThrow(roomCode);
+    this.assertHost(room, hostPlayerId);
+
+    if (room.phase !== "round_results" && room.phase !== "game_over") {
+      throw new Error("ניתן לעדכן תשובות רק לאחר סיום הסיבוב");
+    }
+
+    const entry = room.scoreboard.find((s) => s.playerId === targetPlayerId);
+    if (!entry) throw new Error("שחקן לא נמצא");
+
+    const answer = entry.answers.find((a) => a.categoryId === categoryId);
+    if (!answer) throw new Error("תשובה לא נמצאה");
+
+    const previousScore = answer.score;
+    const isValid = outcome !== "invalid";
+    const isDuplicate = outcome === "valid_duplicate";
+    const score = !isValid ? 0 : outcome === "valid_unique" ? 15 : outcome === "valid_duplicate" ? 5 : 10;
+
+    answer.isCategoryFit = isValid;
+    answer.isValid = isValid;
+    answer.isDuplicate = isDuplicate;
+    answer.score = score;
+    answer.isHostOverride = true;
+    answer.reason = isValid ? "אושר ידנית על ידי המארח" : "נפסל ידנית על ידי המארח";
+    answer.confidence = 1;
+
+    const delta = score - previousScore;
+    entry.totalScore += delta;
+
+    const player = room.players.find((p) => p.id === targetPlayerId);
+    if (player) player.score += delta;
+
+    room.players = rankPlayers(room.players);
+    await this.persistRoom(this.toSnapshot(room, hostPlayerId));
+    this.emitRoomState(room.code);
+  }
     const entry = room.scoreboard.find((s) => s.playerId === targetPlayerId);
     if (!entry) throw new Error("שחקן לא נמצא");
 
@@ -627,3 +682,4 @@ export class GameService {
     }
   }
 }
+

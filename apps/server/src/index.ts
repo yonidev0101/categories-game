@@ -177,6 +177,33 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on(
+    "host_update_answer",
+    async ({
+      roomCode,
+      targetPlayerId,
+      categoryId,
+      outcome,
+    }: {
+      roomCode: string;
+      targetPlayerId: string;
+      categoryId: string;
+      outcome: "valid_normal" | "valid_duplicate" | "valid_unique" | "invalid";
+    }) => {
+      try {
+        await gameService.hostSetAnswerOutcome(
+          roomCode.toUpperCase(),
+          String(socket.data.playerId),
+          targetPlayerId,
+          categoryId,
+          outcome
+        );
+      } catch (error) {
+        socket.emit("error_message", { message: getErrorMessage(error) });
+      }
+    }
+  );
+
   socket.on("host_override_answer", async ({ roomCode, targetPlayerId, categoryId }: { roomCode: string; targetPlayerId: string; categoryId: string }) => {
     try {
       await gameService.hostOverrideAnswer(roomCode.toUpperCase(), String(socket.data.playerId), targetPlayerId, categoryId);
@@ -219,5 +246,4 @@ void bootstrap();
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown error";
 }
-
 

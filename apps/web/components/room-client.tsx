@@ -4,7 +4,7 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
   type ChangeEvent, type CSSProperties, type MutableRefObject
 } from "react";
-import { normalizeHebrew, type RoomSettings, type RoomStateSnapshot, type ScoreBreakdown, type SubmissionPayload, type ValidatedAnswer } from "@categories-game/shared";
+import type { RoomSettings, RoomStateSnapshot, ScoreBreakdown, SubmissionPayload, ValidatedAnswer } from "@categories-game/shared";
 import { getRoomState, rerollRoomLetters, startRoom, updateRoomSettings } from "../lib/api";
 import { getSocket } from "../lib/socket";
 import { readSession } from "../lib/storage";
@@ -201,7 +201,7 @@ function buildCompareRows(snapshot: RoomStateSnapshot): CompareRow[] {
     categoryId: cat.id, categoryLabel: cat.label,
     cells: snapshot.room.players.map((p) => {
       const a = scoreMap.get(p.id)?.get(cat.id);
-      return { playerId: p.id, nickname: p.nickname, answer: a?.answer ?? "", score: a?.score ?? 0, isValid: a?.isValid ?? false, isDuplicate: a?.isDuplicate ?? false };
+      return { playerId: p.id, nickname: p.nickname, answer: a?.answer ?? "", score: a?.score ?? 0, isValid: a?.isValid ?? false, isDuplicate: a?.isDuplicate ?? false, isHostOverride: a?.isHostOverride ?? false };
     }),
   }));
 }
@@ -800,6 +800,8 @@ export function RoomClient({ roomCode }: { roomCode: string }) {
 
   return null;
 }
+
+
 
 
 
