@@ -33,6 +33,7 @@ import {
   generateSurveyQuestions,
   generateRoundQuestions,
   generateCoupleRounds,
+  generateCoupleSurveyQuestions,
   generateCoupleDecoys,
   judgeCloseness,
   type GeneratedRounds,
@@ -401,7 +402,30 @@ export class FamilyService {
     // questions, and their real answers become the options later. Without it
     // the options are the model guessing about people it never met.
     if (room.mode === "couple") {
-      const pool = shuffle(COUPLE_SURVEY_QUESTIONS).slice(0, CONFIG.COUPLE_SURVEY_QUESTIONS_COUNT);
+      const needed = CONFIG.COUPLE_SURVEY_QUESTIONS_COUNT;
+
+      // Without this the same twelve file questions come round every game.
+      let generated: string[] | null = null;
+      if (room.source === "ai" && this.aiApiKey) {
+        room.isPreparing = true;
+        this.emit(room.code);
+        generated = await generateCoupleSurveyQuestions(
+          needed,
+          this.composeFamilyDescription(room),
+          room.usedQuestions,
+          this.aiApiKey,
+          this.surveyModel,
+        );
+        room.isPreparing = false;
+        room.aiFailed = generated === null;
+        if (generated) room.usedQuestions.push(...generated);
+        if (room.phase !== "lobby") return this.snap(room, playerId);
+      }
+
+      const pool = generated?.length
+        ? generated.slice(0, needed)
+        : shuffle(COUPLE_SURVEY_QUESTIONS).slice(0, needed);
+
       for (const player of room.players) {
         player.surveyQuestions = [...pool];
         player.surveyAnswers = pool.map(() => "");

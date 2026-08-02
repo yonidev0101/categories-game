@@ -717,6 +717,66 @@ ${varietyBlock(usedQuestions)}
   return { choices, mostLikely, numbers };
 }
 
+// ─── Couple survey questions ─────────────────────────────────────────────────
+
+const COUPLE_SURVEY_PROMPT = `
+${CONTEXT}
+
+A married couple is about to play. You are writing the OPENING SURVEY: both of
+them will answer the SAME questions privately, each about themselves. Later in
+the game a question is shown with four options — their two real answers plus two
+decoys — and each has to spot which one their partner wrote.
+
+That end use dictates everything:
+  • the answer must fit on a button, so ask something answerable in two to six
+    words. A question that invites a sentence ruins the round.
+  • the two of them should plausibly answer DIFFERENTLY. If everyone would give
+    the same answer there is nothing to guess.
+  • ALWAYS about the person answering, NEVER about their partner. Both of them
+    answer the same question, so a question about one of them by name is
+    answered twice about the same person and the round makes no sense.
+    BAD:  "המאכל ששרה הכי אוהבת להגיש לאורחים"   (about the partner, by name)
+    BAD:  "הדבר הראשון שיוני מחפש כשחוזרים"      (same)
+    GOOD: "המאכל שאני הכי גאה להגיש לאורחים"
+    Never write either of their names into a survey question.
+
+FORMAT: mix the shapes deliberately. Some as a plain first-person label with no
+question mark, some as a real question. Never three of the same shape in a row.
+  "התירוץ הקבוע שלי כשמאחרים"
+  "מה הכי מרגיז אותי בבית?"
+  "איזו מטלה אני הכי דוחה?"
+  "מתי אני הכי שמח בשבת?"
+
+${SAFETY}
+
+${HEBREW}
+`.trim();
+
+export async function generateCoupleSurveyQuestions(
+  count: number,
+  description: string,
+  usedQuestions: string[],
+  apiKey: string,
+  model: string,
+): Promise<string[] | null> {
+  if (!apiKey) return null;
+
+  const user = `
+Write ${count + 4} survey questions for one game. All must be different from
+each other, and spread across different areas of life together.
+
+${familyBlock(description, "The couple wrote nothing about themselves, so keep to everyday life in a frum home.")}
+
+${varietyBlock(usedQuestions)}
+`.trim();
+
+  const parsed = await callOpenAi(apiKey, model, COUPLE_SURVEY_PROMPT, user, SURVEY_SCHEMA, "couple_survey", 30_000);
+  if (!parsed) return null;
+
+  const all = clean(parsed.surveyQuestions, count + 4).filter((q) => !isTangled(q, 9) && !hasSlang(q));
+  return all.length >= 3 ? all.slice(0, count) : null;
+}
+
 // ─── Couple decoys ───────────────────────────────────────────────────────────
 
 export interface CoupleSurveyEntry {
@@ -733,16 +793,32 @@ you write — and each partner has to pick which option their partner wrote.
 
 Your only job is to write the two DECOYS for each question.
 
-A decoy must be:
-  • plausible enough that it could have been written by either of them
-  • the same length and register as the real answers. If they wrote three
-    words, write three words. If they wrote casually, write casually.
-  • clearly different in meaning from BOTH real answers, so there is exactly
-    one correct pick, never two that mean the same thing
-  • never funnier or stranger than the real ones — a decoy that stands out is
-    instantly eliminated and the round collapses to a coin flip
+════════ THE ONLY WAY THIS ROUND FAILS ════════
+Players do not recognise the real answer by its meaning. They recognise it
+because the decoys are written BETTER. A polished, complete, well-punctuated
+option is instantly spotted as the one nobody at this table wrote, and the
+round is over before it started.
 
-You will see both real answers. Match their voice; do not out-write them.
+You are not writing good Hebrew here. You are impersonating two specific people.
+
+  • Write decoy #1 in the voice of the FIRST person and decoy #2 in the voice
+    of the SECOND. Then no style stands out as foreign.
+  • Copy their level of polish exactly. Fragment with no verb → write a
+    fragment with no verb. No final period → no final period. Lowercase
+    casual phrasing → the same.
+  • Never longer than their longest real answer. Shorter is safer.
+  • Do not correct or improve anything about how they write.
+  • Do not add detail they did not use. If they wrote two words, two words.
+
+A decoy must also be:
+  • plausible — something either of them could truly have written
+  • clearly different in MEANING from both real answers, so there is exactly
+    one correct pick and never two that mean the same thing
+  • never funnier or stranger than the real ones
+  • correct Hebrew. Broken phrasing is the loudest tell of all — nobody at the
+    table writes ungrammatically in a way a machine does.
+    BAD:  "נותן הליכה קצרה"    (not Hebrew anyone speaks)
+    GOOD: "יוצא להליכה"
 
   question: "מה שאני עושה כשאני לא מוצא משהו"
   real:     ["מחפש באותו מקום שוב ושוב", "צועק שמישהו הזיז"]
@@ -813,11 +889,26 @@ ${familyBlock(description, "You were told nothing else about this couple — rel
     const entry = usable.find((e) => e.question === question.trim());
     if (!entry) continue;
 
-    const real = entry.answers.map((a) => a.trim().toLowerCase());
+    const realAnswers = entry.answers.map((a) => a.trim()).filter(Boolean);
+    const realLower = realAnswers.map((a) => a.toLowerCase());
+
+    // The model still tidies things up, so strip the tells it cannot resist:
+    // a closing full stop nobody else used, and an answer noticeably longer
+    // than anything the couple actually wrote.
+    const realEndsWithStop = realAnswers.some((a) => /[.!]$/.test(a));
+    const longest = Math.max(...realAnswers.map((a) => a.length), 0);
+
     const clean = decoys
       .filter((d): d is string => typeof d === "string")
-      .map((d) => d.trim())
-      .filter((d) => d.length > 0 && d.length <= 80 && !real.includes(d.toLowerCase()));
+      .map((d) => {
+        let text = d.trim();
+        if (!realEndsWithStop) text = text.replace(/[.!]+$/, "").trim();
+        return text;
+      })
+      .filter((d) => d.length > 0 && d.length <= 80)
+      .filter((d) => !realLower.includes(d.toLowerCase()))
+      // a decoy half again as long as their longest answer reads as the odd one out
+      .filter((d) => longest === 0 || d.length <= Math.round(longest * 1.5));
 
     if (clean.length >= 1) map.set(question.trim(), [...new Set(clean)].slice(0, 2));
   }
