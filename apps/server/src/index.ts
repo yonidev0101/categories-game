@@ -312,7 +312,8 @@ app.post("/family-rooms", (req, res) => {
   try {
     const nickname = String(req.body.nickname ?? "");
     const partnerName = req.body.partnerName ? String(req.body.partnerName) : undefined;
-    res.json(familyService.createRoom(nickname, partnerName));
+    const mode = req.body.mode === "couple" ? "couple" : "family";
+    res.json(familyService.createRoom(nickname, partnerName, mode));
   } catch (error) {
     res.status(400).json({ message: getErrorMessage(error) });
   }
@@ -749,6 +750,14 @@ io.on("connection", (socket) => {
   socket.on("f_vote", ({ roomCode, targetPlayerId }: { roomCode: string; targetPlayerId: string }) => {
     try {
       familyService.castVote(roomCode.toUpperCase(), String(socket.data.familyPlayerId), targetPlayerId);
+    } catch (error) {
+      socket.emit("error_message", { message: getErrorMessage(error) });
+    }
+  });
+
+  socket.on("f_choice", ({ roomCode, optionIndex }: { roomCode: string; optionIndex: number }) => {
+    try {
+      familyService.submitChoice(roomCode.toUpperCase(), String(socket.data.familyPlayerId), Number(optionIndex));
     } catch (error) {
       socket.emit("error_message", { message: getErrorMessage(error) });
     }

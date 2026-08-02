@@ -10,11 +10,15 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function createFamilyRoom(nickname: string, partnerName?: string): Promise<CreateFamilyRoomResponse> {
+export async function createFamilyRoom(
+  nickname: string,
+  partnerName?: string,
+  mode: "family" | "couple" = "family",
+): Promise<CreateFamilyRoomResponse> {
   const { apiUrl } = getClientConfig();
   return fetchJson<CreateFamilyRoomResponse>(`${apiUrl}/family-rooms`, {
     method: "POST",
-    body: JSON.stringify({ nickname, partnerName }),
+    body: JSON.stringify({ nickname, partnerName, mode }),
   });
 }
 

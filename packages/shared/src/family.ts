@@ -3,11 +3,25 @@
 
 export type FamilyPhase = "lobby" | "survey" | "question" | "reveal" | "final";
 
-/** A = "מי הכי סביר ש..."  B = "מי כתב את זה?"  C = "מה המספר?" */
-export type FamilyRoundType = "A" | "B" | "C";
+/**
+ * "family" needs three or more players. "couple" is a different game for
+ * exactly two: rounds A and B collapse with two people (a majority vote where
+ * everyone always wins, and a "who wrote it" with one possible answer), so the
+ * couple game leans on prediction instead.
+ */
+export type FamilyMode = "family" | "couple";
 
-/** Round C runs in two stages: the subject types a number, then everyone guesses it. */
-export type FamilyRoundStage = "subject_input" | "guessing";
+/**
+ * A = "מי הכי סביר ש..."   B = "מי כתב את זה?"   C = "מה המספר?"
+ * D = "מה ענית?" — both answer about themselves, then predict each other
+ */
+export type FamilyRoundType = "A" | "B" | "C" | "D";
+
+/**
+ * C: the subject types a number, then everyone guesses it.
+ * D: both answer for themselves, then both predict the other.
+ */
+export type FamilyRoundStage = "subject_input" | "guessing" | "self_answer" | "predict";
 
 export interface FamilyPlayerInfo {
   id: string;
@@ -56,6 +70,14 @@ export interface FamilyQuestionView {
   /** player ids I am allowed to vote for (rounds A and B) */
   votableIds: string[];
 
+  /** Round D — the options both partners choose from */
+  choices: string[];
+  /** Round D — what I picked for myself, and what I think my partner picked */
+  myChoice: number | null;
+  myPrediction: number | null;
+  /** Round D — my partner's name, shown while predicting */
+  partnerNickname: string | null;
+
   /** my answer so far — restored on reconnect so I never vote twice */
   myVote: string | null;
   myNumber: number | null;
@@ -81,6 +103,17 @@ export interface FamilyVoteReveal {
 }
 
 /** Round C — one row per guesser. Ordered furthest → closest. */
+/** Round D — what each partner picked, and what the other predicted. */
+export interface FamilyPredictionReveal {
+  playerId: string;
+  nickname: string;
+  /** the option they picked for themselves */
+  choice: string;
+  /** what their partner thought they would pick */
+  predictedByPartner: string | null;
+  correct: boolean;
+}
+
 export interface FamilyNumberReveal {
   playerId: string;
   nickname: string;
@@ -105,6 +138,8 @@ export interface FamilyRevealView {
 
   votes: FamilyVoteReveal[];
   numbers: FamilyNumberReveal[];
+  /** round D */
+  predictions: FamilyPredictionReveal[];
 
   /** round B */
   answerText: string | null;
@@ -150,6 +185,7 @@ export interface FamilyNoteStatus {
 }
 
 export interface FamilySetup {
+  mode: FamilyMode;
   source: FamilyQuestionSource;
   /** how many rounds this game will run — the host picks it in the lobby */
   roundCount: number;

@@ -11,7 +11,7 @@ import { listSessions, saveSession, type StoredSession } from "../lib/storage";
 
 // ─── Game definitions ─────────────────────────────────────────────────────────
 
-type GameType = "categories" | "personality" | "taboo" | "codenames" | "family";
+type GameType = "categories" | "personality" | "taboo" | "codenames" | "family" | "couple";
 
 const GAMES = [
   {
@@ -50,8 +50,16 @@ const GAMES = [
     id:     "family" as GameType,
     emoji:  "👨‍👩‍👧",
     name:   "מי מהמשפחה?",
-    desc:   "ניחושים על המשפחה",
+    desc:   "ניחושים על המשפחה · 3+",
     accent: "#ef4444",
+    hasMode: false,
+  },
+  {
+    id:     "couple" as GameType,
+    emoji:  "💛",
+    name:   "מי מאיתנו?",
+    desc:   "כמה אתם מכירים · 2",
+    accent: "#e0457b",
     hasMode: false,
   },
 ] as const;
@@ -147,8 +155,12 @@ export function LandingShell() {
         const r = await createCodenamesRoom(createNickname.trim());
         saveSession({ roomCode: r.room.code, playerId: r.playerId, sessionToken: r.sessionToken, gameType: "codenames" });
         router.push(`/codenames/${r.room.code}`);
-      } else if (gameType === "family") {
-        const r = await createFamilyRoom(createNickname.trim(), sharedDevice ? partnerName.trim() : undefined);
+      } else if (gameType === "family" || gameType === "couple") {
+        const r = await createFamilyRoom(
+          createNickname.trim(),
+          gameType === "family" && sharedDevice ? partnerName.trim() : undefined,
+          gameType === "couple" ? "couple" : "family",
+        );
         saveSession({ roomCode: r.room.room.code, playerId: r.playerId, sessionToken: r.sessionToken, gameType: "family" });
         router.push(`/family/${r.room.room.code}`);
       } else {
@@ -179,8 +191,8 @@ export function LandingShell() {
         const r = await joinCodenamesRoom(code, joinNickname.trim());
         saveSession({ roomCode: code, playerId: r.playerId, sessionToken: r.sessionToken, gameType: "codenames" });
         router.push(`/codenames/${code}`);
-      } else if (gameType === "family") {
-        const r = await joinFamilyRoom(code, joinNickname.trim(), sharedDevice ? partnerName.trim() : undefined);
+      } else if (gameType === "family" || gameType === "couple") {
+        const r = await joinFamilyRoom(code, joinNickname.trim(), gameType === "family" && sharedDevice ? partnerName.trim() : undefined);
         saveSession({ roomCode: code, playerId: r.playerId, sessionToken: r.sessionToken, gameType: "family" });
         router.push(`/family/${code}`);
       } else {

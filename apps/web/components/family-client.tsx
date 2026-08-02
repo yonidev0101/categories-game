@@ -21,6 +21,7 @@ import type { FamilySnapshot, FamilyPlayerInfo, FamilyRoundType } from "@categor
 
 const ROUND_LABEL: Record<FamilyRoundType, string> = {
   A: "על מי מדובר",
+  D: "מה ענית",
   B: "הפתק",
   C: "המספר",
 };
@@ -347,6 +348,32 @@ function PersonButton({
   );
 }
 
+/** Round D — the same four options, first for yourself and then for your partner. */
+function ChoiceList({
+  options, selected, onPick,
+}: {
+  options: string[];
+  selected: number | null;
+  onPick: (index: number) => void;
+}) {
+  return (
+    <div className="fm-choices">
+      {options.map((option, index) => (
+        <button
+          key={option}
+          type="button"
+          className={`fm-option${selected === index ? " fm-option-on" : ""}`}
+          onClick={() => onPick(index)}
+          aria-pressed={selected === index}
+        >
+          <span className="fm-option-text">{option}</span>
+          {selected === index && <span className="fm-option-tick" aria-hidden>✓</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function NumberField({
   value, onChange, onSubmit, submitted, label,
 }: {
@@ -464,7 +491,7 @@ export function FamilyClient({ roomCode }: Props) {
 
   // ── Reveal, one row at a time, lowest first ───────────────────────────────
   const reveal = room?.reveal ?? null;
-  const revealCount = (reveal?.votes.length ?? 0) + (reveal?.numbers.length ?? 0);
+  const revealCount = (reveal?.votes.length ?? 0) + (reveal?.numbers.length ?? 0) + (reveal?.predictions.length ?? 0);
   useEffect(() => {
     if (!reveal) { setRevealed(0); return; }
     setRevealed(0);
@@ -518,7 +545,7 @@ export function FamilyClient({ roomCode }: Props) {
   useEffect(() => {
     const rv = room?.reveal;
     if (!rv || phase !== "reveal") return;
-    const total = rv.votes.length + rv.numbers.length;
+    const total = rv.votes.length + rv.numbers.length + rv.predictions.length;
     if (revealed < total || scoredThisReveal.current === rv.roundNumber) return;
     scoredThisReveal.current = rv.roundNumber;
     const mine = rv.pointsAwarded.find((p) => p.playerId === myId)?.points ?? 0;
@@ -896,6 +923,33 @@ export function FamilyClient({ roomCode }: Props) {
       </footer>
     );
 
+    // D — answer for yourself, then guess what your partner answered
+    if (question.type === "D") {
+      const answeringForSelf = question.stage === "self_answer";
+      return shell(
+        <>
+          <Note fraction={fraction} secondsLeft={secondsLeft}>
+            <p className="fm-kicker">
+              {answeringForSelf ? "ענו על עצמכם" : `מה ${question.partnerNickname} ענה/תה?`}
+            </p>
+            <h1 className="fm-question">{question.prompt}</h1>
+            <p className="fm-do">
+              {answeringForSelf
+                ? "בחרו את התשובה שלכם. אף אחד לא רואה אותה עדיין."
+                : "100 נקודות אם תקלעו"}
+            </p>
+          </Note>
+          <ChoiceList
+            options={question.choices}
+            selected={answeringForSelf ? question.myChoice : question.myPrediction}
+            onPick={(index) => emit("f_choice", { optionIndex: index })}
+          />
+        </>,
+        railNode,
+        dock,
+      );
+    }
+
     // A — vote for a person
     if (question.type === "A") {
       return shell(
@@ -1048,6 +1102,19 @@ export function FamilyClient({ roomCode }: Props) {
         </Note>
 
         <ul className="fm-results">
+          {reveal.predictions.slice(0, revealed).map((row) => (
+            <li key={row.playerId} className={`fm-result${row.correct ? " fm-result-hit" : ""}`}>
+              <Avatar players={room.players} id={row.playerId} nickname={row.nickname} size={38} />
+              <span className="fm-predict">
+                <span className="fm-predict-name">{row.nickname} ענה/תה</span>
+                <span className="fm-predict-choice">{row.choice}</span>
+                <span className="fm-predict-guess">
+                  {row.predictedByPartner ? `ניחשו: ${row.predictedByPartner}` : "לא ניחשו"}
+                </span>
+              </span>
+              <span className="fm-result-value">{row.correct ? "✓" : "✗"}</span>
+            </li>
+          ))}
           {reveal.votes.slice(0, revealed).map((row) => (
             <li key={row.playerId} className={`fm-result${row.isAuthor ? " fm-result-hit" : ""}`}>
               <Avatar players={room.players} id={row.playerId} nickname={row.nickname} size={38} />
@@ -1395,6 +1462,25 @@ function Styles() {
         display: inline-flex; align-items: center; justify-content: center;
         font-weight: 800; letter-spacing: -0.02em;
       }
+
+      /* ── Round D options ──────────────────────────────────────────────── */
+      .fm-option {
+        display: flex; align-items: center; gap: 12px; width: 100%;
+        min-height: 72px; padding: 14px 18px;
+        border-radius: 18px; border: 2px solid rgba(255,255,255,0.14);
+        background: rgba(255,255,255,0.05); color: var(--paper);
+        font-family: inherit; font-size: 21px; font-weight: 700;
+        text-align: start; cursor: pointer;
+      }
+      .fm-option:active { transform: scale(0.985); }
+      .fm-option-on { border-color: var(--persimmon); background: rgba(255,90,60,0.18); }
+      .fm-option-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+      .fm-option-tick { font-size: 25px; font-weight: 900; color: var(--persimmon); }
+
+      .fm-predict { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+      .fm-predict-name { font-size: 15px; color: #A98FBA; font-weight: 700; }
+      .fm-predict-choice { font-size: 20px; font-weight: 800; overflow-wrap: anywhere; }
+      .fm-predict-guess { font-size: 15px; color: #A98FBA; }
 
       /* ── Number ───────────────────────────────────────────────────────── */
       .fm-number { display: flex; flex-direction: column; gap: 12px; }
