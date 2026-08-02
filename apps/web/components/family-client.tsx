@@ -1004,23 +1004,16 @@ export function FamilyClient({ roomCode }: Props) {
 
     // D — answer for yourself, then guess what your partner answered
     if (question.type === "D") {
-      const answeringForSelf = question.stage === "self_answer";
       return shell(
         <>
           <Note fraction={fraction} secondsLeft={secondsLeft}>
-            <p className="fm-kicker">
-              {answeringForSelf ? "ענו על עצמכם" : `מה ${question.partnerNickname} ענה/תה?`}
-            </p>
-            <h1 className="fm-question">{question.prompt}</h1>
-            <p className="fm-do">
-              {answeringForSelf
-                ? "בחרו את התשובה שלכם. אף אחד לא רואה אותה עדיין."
-                : "100 נקודות אם תקלעו"}
-            </p>
+            <p className="fm-kicker">{question.prompt}</p>
+            <h1 className="fm-question">מה {question.partnerNickname} ענה/תה?</h1>
+            <p className="fm-do">אחת מהתשובות היא שלך — 100 נקודות אם תזהו את של השני</p>
           </Note>
           <ChoiceList
             options={question.choices}
-            selected={answeringForSelf ? question.myChoice : question.myPrediction}
+            selected={question.myPrediction}
             onPick={(index) => emit("f_choice", { optionIndex: index })}
           />
         </>,

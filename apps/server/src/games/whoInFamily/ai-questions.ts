@@ -692,6 +692,114 @@ ${varietyBlock(usedQuestions)}
   return { choices, mostLikely, numbers };
 }
 
+// ─── Couple decoys ───────────────────────────────────────────────────────────
+
+export interface CoupleSurveyEntry {
+  question: string;
+  /** what each of them actually wrote, in their own words */
+  answers: string[];
+}
+
+const DECOY_PROMPT = `
+A married couple is playing a Hebrew guessing game. Each of them privately
+answered the same short questions about themselves, in their own words. In the
+game the question is shown with four options — the two real answers plus two
+you write — and each partner has to pick which option their partner wrote.
+
+Your only job is to write the two DECOYS for each question.
+
+A decoy must be:
+  • plausible enough that it could have been written by either of them
+  • the same length and register as the real answers. If they wrote three
+    words, write three words. If they wrote casually, write casually.
+  • clearly different in meaning from BOTH real answers, so there is exactly
+    one correct pick, never two that mean the same thing
+  • never funnier or stranger than the real ones — a decoy that stands out is
+    instantly eliminated and the round collapses to a coin flip
+
+You will see both real answers. Match their voice; do not out-write them.
+
+  question: "מה שאני עושה כשאני לא מוצא משהו"
+  real:     ["מחפש באותו מקום שוב ושוב", "צועק שמישהו הזיז"]
+  GOOD decoys: ["מוותר ומחכה שיצוץ", "מתחיל לרוקן מגירות"]
+  BAD decoys:  ["מחפש שוב באותו מקום", "מתקשר למשטרה"]
+               (first repeats a real answer, second is absurd)
+
+${SAFETY}
+
+${HEBREW}
+`.trim();
+
+const DECOY_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          question: { type: "string" },
+          decoys: { type: "array", items: { type: "string" } },
+        },
+        required: ["question", "decoys"],
+      },
+    },
+  },
+  required: ["items"],
+};
+
+/** Returns a map from question text to its two decoys. */
+export async function generateCoupleDecoys(
+  entries: CoupleSurveyEntry[],
+  description: string,
+  apiKey: string,
+  model: string,
+  timeoutMs = 90_000,
+): Promise<Map<string, string[]> | null> {
+  const usable = entries.filter((e) => e.answers.filter((a) => a.trim()).length >= 1);
+  if (!apiKey || usable.length === 0) return null;
+
+  const block = usable
+    .map((e) => `question: "${e.question}"\nreal: [${e.answers.filter(Boolean).map((a) => `"${a}"`).join(", ")}]`)
+    .join("\n\n");
+
+  const user = `
+Write exactly two decoys for each of these ${usable.length} questions.
+
+${block}
+
+${familyBlock(description, "You were told nothing else about this couple — rely on how they write.")}
+`.trim();
+
+  const parsed = await callOpenAi(apiKey, model, DECOY_PROMPT, user, DECOY_SCHEMA, "couple_decoys", timeoutMs);
+  if (!parsed) return null;
+
+  const items = Array.isArray(parsed.items) ? parsed.items : [];
+  const map = new Map<string, string[]>();
+
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const question = (item as { question?: unknown }).question;
+    const decoys = (item as { decoys?: unknown }).decoys;
+    if (typeof question !== "string" || !Array.isArray(decoys)) continue;
+
+    const entry = usable.find((e) => e.question === question.trim());
+    if (!entry) continue;
+
+    const real = entry.answers.map((a) => a.trim().toLowerCase());
+    const clean = decoys
+      .filter((d): d is string => typeof d === "string")
+      .map((d) => d.trim())
+      .filter((d) => d.length > 0 && d.length <= 80 && !real.includes(d.toLowerCase()));
+
+    if (clean.length >= 1) map.set(question.trim(), [...new Set(clean)].slice(0, 2));
+  }
+
+  return map.size > 0 ? map : null;
+}
+
 // ─── Plumbing ────────────────────────────────────────────────────────────────
 
 async function callOpenAi(
