@@ -196,7 +196,7 @@ ${angle}. Keep the overall spread across the axes above.${avoid}`.trim();
 
 // ─── Call 1 — survey questions (lobby) ───────────────────────────────────────
 
-const SURVEY_PROMPT = `
+export const SURVEY_PROMPT = `
 ${CONTEXT}
 
 You are writing the OPENING SURVEY. Each player privately writes a short answer
@@ -308,7 +308,7 @@ function looksLikeQuestion(text: string): boolean {
 
 // ─── Call 2 — round questions (end of survey) ────────────────────────────────
 
-const ROUNDS_PROMPT = `
+export const ROUNDS_PROMPT = `
 ${CONTEXT}
 
 You are writing two kinds of round. Read the rules for each carefully.

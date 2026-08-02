@@ -15,3 +15,5 @@ web-build.log
 *.bak
 *.bak2
 *.tsbuildinfo
+
+prompt-comparison.txt
