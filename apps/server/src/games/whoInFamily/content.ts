@@ -180,6 +180,8 @@ export const CONFIG = {
   POINTS_COUPLE_AGREE: 100,
   /** ברירת המחדל למספר הסבבים במצב זוגי */
   COUPLE_DEFAULT_ROUNDS: 10,
+  /** בונוס כששניכם ניחשתם נכון אחד את השני באותו סבב */
+  POINTS_COUPLE_SYNC: 100,
   /** אם כולם ענו — לקצר את ההמתנה ולעבור הלאה אחרי כמה שניות */
   ALL_ANSWERED_GRACE_SECONDS: 3,
 } as const;

@@ -572,6 +572,43 @@ About the reader themselves, no "אתה" or "את", past tense or "יש לך".
   GOOD: "כמה שנים אנחנו מכירים?"
   GOOD: "כמה פעמים בשבוע שטפתי כלים?"
 
+════════ TONE — the whole point of this game ════════
+Two people who know each other very well are trying to prove it. The fun is in
+recognition: "that is SO you". A flat, sensible item is a wasted round.
+
+Where the laughs come from, mix all five:
+
+  • THE RUNNING ARGUMENT — the thing they have disagreed about for years and
+    will never settle
+      "מה באמת קרה בפעם הראשונה שהלכנו לאיבוד?"
+      options: ["הוא פספס פנייה", "היא נתנה הוראה הפוכה", "הוויז אשם", "לא הלכנו לאיבוד"]
+
+  • THE TELL — the small thing that gives your partner away
+      "מה הסימן שאני מתחיל להתעצבן?"
+      options: ["שקט פתאומי", "מסדר דברים בכוח", "צוחק בלי סיבה", "עונה קצר מדי"]
+
+  • THE SMALL BETRAYAL — everybody does it, nobody admits it
+      "מה עשיתי עם החתיכה האחרונה בעוגה?"
+      options: ["אכלתי", "השארתי לך", "חילקתי", "העמדתי פנים שלא ראיתי"]
+
+  • THE RITUAL — the thing only these two do
+      "מה תמיד קורה אצלנו בדרך חזרה מאירוע?"
+      options: ["מנתחים את כולם", "אחד נרדם", "רבים על המוזיקה", "שקט מוחלט"]
+
+  • THE WARM ONE — not everything is teasing. Every few items, something kind.
+      "מה הכי מרגיע אותי כשיום היה קשה?"
+
+CRITICAL — in "choices", the OPTIONS are where the joke lives, not the question.
+Four flat options make a boring round no matter how good the question is. Each
+option should be a small picture of a different person.
+  BORING:  ["כן", "לא", "לפעמים", "תלוי"]
+  BORING:  ["לישון", "לנוח", "לנמנם", "להירגע"]
+  GOOD:    ["מחפש באותו מקום שלוש פעמים", "קורא לך מיד", "מוותר ומודיע שאבד", "מאשים מישהו"]
+
+Every option must still be something a real person would actually pick — funny,
+not absurd. If one option is clearly the joke answer nobody would choose, the
+round collapses to three options.
+
 ════════ WHAT THIS GAME MAY TALK ABOUT ════════
 Unlike the family game, here you MAY write warmly about the marriage itself:
 how they met, the wedding, what each of them values in the other, small

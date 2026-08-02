@@ -992,7 +992,11 @@ export class FamilyService {
       // the point is agreeing, and disagreeing is the fun part.
       const agreed = tally.size === 1 && Object.keys(room.votes).length === room.players.length;
       if (agreed) {
-        for (const player of room.players) award(player.id, CONFIG.POINTS_COUPLE_AGREE, "הסכמתם");
+        for (const player of room.players) {
+          award(player.id, CONFIG.POINTS_COUPLE_AGREE, "הסכמתם");
+          // reused as the couple's agreement counter for the end-of-game titles
+          player.majorityHits += 1;
+        }
       }
     } else if (round.type === "A") {
       // Everyone who voted with the majority scores. On a tie, every tied
@@ -1116,8 +1120,20 @@ export class FamilyService {
     });
 
     const hits = predictions.filter((p) => p.correct).length;
+
+    // Both read each other correctly in the same round — the moment the whole
+    // game is chasing. Worth calling out and worth extra points.
+    const inSync = hits === predictions.length && predictions.length > 1;
+    if (inSync) {
+      for (const player of room.players) {
+        points.set(player.id, (points.get(player.id) ?? 0) + CONFIG.POINTS_COUPLE_SYNC);
+        reasons.set(player.id, "סנכרון מלא — שניכם קלעתם");
+        player.score += CONFIG.POINTS_COUPLE_SYNC;
+      }
+    }
+
     const summary =
-      hits === predictions.length ? "שניכם ידעתם. מרשים." :
+      inSync ? "סנכרון מלא. שניכם קלעתם." :
       hits === 0 ? "אף אחד לא קלע. יש עוד מה ללמוד." :
       `${hits} מתוך ${predictions.length} קלעו.`;
 
@@ -1217,7 +1233,52 @@ export class FamilyService {
     return Math.round((right / made) * 100);
   }
 
+  /**
+   * The family titles lean on stats the couple game never produces, so it gets
+   * its own — and they are about the two of them, not about a winner.
+   */
+  private computeCoupleTitles(room: StoredFamilyRoom): FamilyTitle[] {
+    const titles: FamilyTitle[] = [];
+    const [one, two] = room.players;
+    if (!one || !two) return titles;
+
+    const rate = (p: StoredFamilyPlayer) => (p.predictionsMade > 0 ? p.predictionsRight / p.predictionsMade : 0);
+    const reader = rate(one) === rate(two) ? null : rate(one) > rate(two) ? one : two;
+
+    if (reader) {
+      titles.push({
+        key: "reader",
+        label: "קורא/ת מחשבות",
+        playerId: reader.id,
+        nickname: reader.nickname,
+        detail: `ניחש/ה נכון ${reader.predictionsRight} מתוך ${reader.predictionsMade}`,
+      });
+    } else if (one.predictionsMade > 0) {
+      titles.push({
+        key: "tie",
+        label: "תיקו מושלם",
+        playerId: one.id,
+        nickname: `${one.nickname} ו${two.nickname}`,
+        detail: "שניכם קלעתם בדיוק אותו מספר פעמים",
+      });
+    }
+
+    const agreements = room.players[0].majorityHits;
+    if (agreements > 0) {
+      titles.push({
+        key: "agree",
+        label: "על זה הסכמנו",
+        playerId: one.id,
+        nickname: `${one.nickname} ו${two.nickname}`,
+        detail: `הסכמתם ב-${agreements} סבבים`,
+      });
+    }
+
+    return titles;
+  }
+
   private computeTitles(room: StoredFamilyRoom): FamilyTitle[] {
+    if (room.mode === "couple") return this.computeCoupleTitles(room);
     const titles: FamilyTitle[] = [];
     const add = (key: string, label: string, player: StoredFamilyPlayer | undefined, detail: string) => {
       if (player) titles.push({ key, label, playerId: player.id, nickname: player.nickname, detail });
