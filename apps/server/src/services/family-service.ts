@@ -1015,10 +1015,12 @@ export class FamilyService {
     room.roundIndex += 1;
     room.votes = {};
     room.numbers = {};
-    // Without these two the next round opens with last round's pick already
-    // highlighted, which reads as "the answer is chosen for me".
+    // Every per-round answer store has to be cleared here. Anything left
+    // behind reappears next round as an answer the player never gave — a
+    // pre-selected option, or a text box that opens already filled in.
     room.choices = {};
     room.predictions = {};
+    room.texts = {};
     room.subjectNumber = null;
     room.reveal = null;
     room.stage = null;
