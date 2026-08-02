@@ -85,6 +85,10 @@ interface StoredFamilyRoom {
   titles: FamilyTitle[];
 
   source: FamilyQuestionSource;
+  /** how many rounds this game runs, chosen by the host */
+  roundCount: number;
+  /** the shuffled type sequence for this game, decided before the AI is asked */
+  roundTypes: FamilyRoundType[];
   /** every question this room has already played, so a rematch feels new */
   usedQuestions: string[];
   isPreparing: boolean;
@@ -112,6 +116,49 @@ function shuffle<T>(items: readonly T[]): T[] {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+/**
+ * ROUND_ORDER sets the *ratio* between round types, not the length of the game.
+ * The host picks the length; this scales the ratio to it, shuffles, and then
+ * breaks up any run of three identical types so the game keeps changing shape.
+ */
+function buildRoundTypes(count: number): FamilyRoundType[] {
+  const template = ROUND_ORDER.length > 0 ? ROUND_ORDER : (["A"] as FamilyRoundType[]);
+
+  const remaining = new Map<FamilyRoundType, number>();
+  for (let i = 0; i < count; i += 1) {
+    const type = template[i % template.length];
+    remaining.set(type, (remaining.get(type) ?? 0) + 1);
+  }
+
+  // Always place whichever type has the most left, skipping anything that would
+  // make three in a row. Shuffling and then patching does not work: by the tail
+  // there is nothing left to swap with, and the game ends on a long run of one
+  // type. Placing the scarcest-last keeps every type spread to the end.
+  const types: FamilyRoundType[] = [];
+  while (types.length < count) {
+    const options = shuffle([...remaining.entries()].filter(([, left]) => left > 0));
+
+    const wouldRepeat = (type: FamilyRoundType) =>
+      types.length >= 2 && types[types.length - 1] === type && types[types.length - 2] === type;
+
+    const allowed = options.filter(([type]) => !wouldRepeat(type));
+    const from = allowed.length > 0 ? allowed : options;
+    if (from.length === 0) break;
+
+    const [pick] = from.reduce((best, cur) => (cur[1] > best[1] ? cur : best));
+    types.push(pick);
+    remaining.set(pick, (remaining.get(pick) ?? 1) - 1);
+  }
+
+  // Round C needs a subject and reads oddly as an opener — never start on it.
+  if (types[0] === "C") {
+    const other = types.findIndex((t) => t !== "C");
+    if (other !== -1) [types[0], types[other]] = [types[other], types[0]];
+  }
+
+  return types;
 }
 
 /** Draw `count` items, reshuffling and reusing the pool if it runs out. */
@@ -158,7 +205,8 @@ export class FamilyService {
       // Fresh questions every game is the better experience, so that is the
       // default whenever we have a key. content.ts stays as the safety net.
       source: this.aiApiKey ? "ai" : "file",
-
+      roundCount: CONFIG.DEFAULT_ROUNDS,
+      roundTypes: [],
       usedQuestions: [],
       isPreparing: false,
       aiFailed: false,
@@ -185,8 +233,12 @@ export class FamilyService {
     return { room: this.snap(room, player.id), sessionToken: player.sessionToken, playerId: player.id };
   }
 
-  /** Only the host decides where the questions come from. */
-  updateSetup(roomCode: string, playerId: string, setup: { source?: FamilyQuestionSource }) {
+  /** Only the host decides where the questions come from and how long we play. */
+  updateSetup(
+    roomCode: string,
+    playerId: string,
+    setup: { source?: FamilyQuestionSource; roundCount?: number },
+  ) {
     const room = this.getRoom(roomCode);
     this.assertHost(room, playerId);
     if (room.phase !== "lobby") throw new Error("אפשר לשנות רק לפני שהמשחק מתחיל");
@@ -194,6 +246,9 @@ export class FamilyService {
 
     if (setup.source === "ai" || setup.source === "file") {
       room.source = setup.source === "ai" && !this.aiApiKey ? "file" : setup.source;
+    }
+    if (typeof setup.roundCount === "number" && Number.isFinite(setup.roundCount)) {
+      room.roundCount = Math.min(CONFIG.MAX_ROUNDS, Math.max(CONFIG.MIN_ROUNDS, Math.round(setup.roundCount)));
     }
 
     this.emit(room.code);
@@ -234,6 +289,9 @@ export class FamilyService {
     room.aiFailed = false;
     room.generatedSurvey = null;
     room.generatedRounds = null;
+    // Decide the shape of the game up front — the AI needs to know how many of
+    // each type to write, and the mix must not change once we have asked.
+    room.roundTypes = buildRoundTypes(room.roundCount);
 
     // First AI call, in the lobby: the survey questions. Nothing is on a timer
     // yet, so this one can take its time. On failure we use content.ts.
@@ -301,6 +359,21 @@ export class FamilyService {
     }
     const fileNumbers = [...NUMBER_QUESTIONS.live, ...NUMBER_QUESTIONS.personal];
     return rounds && rounds.numberQuestions.length > 0 ? rounds.numberQuestions : fileNumbers;
+  }
+
+  /**
+   * The survey window is deliberately generous, so the host needs a way to say
+   * "everyone's done, let's play" instead of watching the clock run out.
+   */
+  finishSurveyNow(roomCode: string, playerId: string) {
+    const room = this.getRoom(roomCode);
+    this.assertHost(room, playerId);
+    if (room.phase !== "survey") throw new Error("השאלון לא פעיל");
+    if (room.isPreparing) throw new Error("כבר מכינים את הסבבים");
+
+    this.clearTimer(room);
+    this.endSurvey(room);
+    return this.snap(room, playerId);
   }
 
   /**
@@ -486,8 +559,8 @@ export class FamilyService {
 
       room.generatedRounds = await generateRoundQuestions(
         {
-          mostLikely: Math.max(6, ROUND_ORDER.filter((t) => t === "A").length),
-          numbers: Math.max(4, ROUND_ORDER.filter((t) => t === "C").length),
+          mostLikely: Math.max(6, room.roundTypes.filter((t) => t === "A").length),
+          numbers: Math.max(4, room.roundTypes.filter((t) => t === "C").length),
         },
         this.composeFamilyDescription(room),
         material,
@@ -521,8 +594,9 @@ export class FamilyService {
    * answer left to use are downgraded to A rounds rather than dropped.
    */
   private buildRounds(room: StoredFamilyRoom) {
-    const statements = drawCycling(this.pool(room, "mostLikely"), ROUND_ORDER.length);
-    const numberPool = drawCycling(this.pool(room, "numbers"), ROUND_ORDER.length);
+    const plan = room.roundTypes.length > 0 ? room.roundTypes : buildRoundTypes(room.roundCount);
+    const statements = drawCycling(this.pool(room, "mostLikely"), plan.length);
+    const numberPool = drawCycling(this.pool(room, "numbers"), plan.length);
 
     // Every non-empty survey answer, shuffled, so round B never repeats one.
     const answerPool = shuffle(
@@ -539,7 +613,7 @@ export class FamilyService {
     let subjectIdx = 0;
 
     const rounds: PlannedRound[] = [];
-    for (const type of ROUND_ORDER) {
+    for (const type of plan) {
       if (type === "B") {
         const entry = answerPool.pop();
         if (entry) {
@@ -881,7 +955,7 @@ export class FamilyService {
         }),
       ),
       roundNumber: room.roundIndex + 1,
-      totalRounds: room.rounds.length || ROUND_ORDER.length,
+      totalRounds: room.rounds.length || room.roundCount,
       phaseEndsAt: room.phaseEndsAt,
       survey: room.phase === "survey" ? this.surveyView(room, me) : null,
       question: room.phase === "question" ? this.questionView(room, playerId) : null,
@@ -906,6 +980,7 @@ export class FamilyService {
           : null,
       setup: {
         source: room.source,
+        roundCount: room.roundCount,
         myNote: me?.note ?? "",
         notes: room.players.map((p) => ({
           playerId: p.id,
@@ -920,6 +995,8 @@ export class FamilyService {
         surveyAnswerMaxChars: CONFIG.SURVEY_ANSWER_MAX_CHARS,
         minPlayers: CONFIG.MIN_PLAYERS,
         noteMaxChars: NOTE_MAX,
+        minRounds: CONFIG.MIN_ROUNDS,
+        maxRounds: CONFIG.MAX_ROUNDS,
       },
       createdAt: room.createdAt,
     };

@@ -708,6 +708,39 @@ export function FamilyClient({ roomCode }: Props) {
           </section>
         )}
 
+        {isHost && (
+          <section className="fm-block">
+            <h2 className="fm-block-title">אורך המשחק</h2>
+            <div className="fm-rounds">
+              <button
+                type="button"
+                className="fm-round-step"
+                onClick={() => emit("f_update_setup", { roundCount: setup.roundCount - 5 })}
+                disabled={setup.roundCount <= room.config.minRounds}
+                aria-label="פחות סבבים"
+              >
+                −
+              </button>
+              <div className="fm-round-value">
+                <span className="fm-round-num">{setup.roundCount}</span>
+                <span className="fm-round-label">סבבים</span>
+              </div>
+              <button
+                type="button"
+                className="fm-round-step"
+                onClick={() => emit("f_update_setup", { roundCount: setup.roundCount + 5 })}
+                disabled={setup.roundCount >= room.config.maxRounds}
+                aria-label="עוד סבבים"
+              >
+                +
+              </button>
+            </div>
+            <p className="fm-note-line">
+              בערך {Math.round((setup.roundCount * 40) / 60)} דקות משחק. סוגי הסבבים מעורבבים אקראית בכל משחק.
+            </p>
+          </section>
+        )}
+
         <section className="fm-block">
           <h2 className="fm-block-title">בחדר · {room.players.length}</h2>
           <ul className="fm-people">
@@ -781,6 +814,11 @@ export function FamilyClient({ roomCode }: Props) {
           answeredIds={survey.finishedIds}
           caption="סיימו"
         />
+        {isHost && (
+          <button type="button" className="fm-action" onClick={() => emit("f_finish_survey")}>
+            {survey.finishedCount === survey.totalCount ? "כולם סיימו — התחילו" : "סיימו ותתחילו"}
+          </button>
+        )}
       </footer>
     );
 
@@ -1410,6 +1448,22 @@ function Styles() {
       .fm-people-me { border: 2px solid var(--persimmon); }
       .fm-place { font-size: 17px; font-weight: 800; color: #8E77A0; min-width: 24px; font-variant-numeric: tabular-nums; }
       .fm-note-line { margin: 6px 0 0; font-size: 16px; line-height: 1.6; color: #A98FBA; }
+
+      /* ── Game length ──────────────────────────────────────────────────── */
+      .fm-rounds { display: flex; align-items: center; gap: 12px; }
+      .fm-round-step {
+        width: 64px; height: 64px; flex-shrink: 0;
+        border-radius: 16px; border: 2px solid rgba(255,255,255,0.2);
+        background: rgba(255,255,255,0.06); color: var(--paper);
+        font-family: inherit; font-size: 32px; font-weight: 900; cursor: pointer;
+      }
+      .fm-round-step:disabled { opacity: 0.3; cursor: default; }
+      .fm-round-value {
+        flex: 1; display: flex; flex-direction: column; align-items: center;
+        padding: 8px; border-radius: 16px; background: rgba(255,255,255,0.05);
+      }
+      .fm-round-num { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; }
+      .fm-round-label { font-size: 14px; color: #A98FBA; font-weight: 700; }
 
       /* ── Question source ──────────────────────────────────────────────── */
       .fm-source { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

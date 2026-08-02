@@ -710,9 +710,20 @@ io.on("connection", (socket) => {
     })();
   });
 
-  socket.on("f_update_setup", ({ roomCode, source }: { roomCode: string; source?: "file" | "ai" }) => {
+  socket.on(
+    "f_update_setup",
+    ({ roomCode, source, roundCount }: { roomCode: string; source?: "file" | "ai"; roundCount?: number }) => {
+      try {
+        familyService.updateSetup(roomCode.toUpperCase(), String(socket.data.familyPlayerId), { source, roundCount });
+      } catch (error) {
+        socket.emit("error_message", { message: getErrorMessage(error) });
+      }
+    },
+  );
+
+  socket.on("f_finish_survey", ({ roomCode }: { roomCode: string }) => {
     try {
-      familyService.updateSetup(roomCode.toUpperCase(), String(socket.data.familyPlayerId), { source });
+      familyService.finishSurveyNow(roomCode.toUpperCase(), String(socket.data.familyPlayerId));
     } catch (error) {
       socket.emit("error_message", { message: getErrorMessage(error) });
     }

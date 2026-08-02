@@ -151,6 +151,8 @@ export interface FamilyNoteStatus {
 
 export interface FamilySetup {
   source: FamilyQuestionSource;
+  /** how many rounds this game will run — the host picks it in the lobby */
+  roundCount: number;
   /** what I wrote about the family — every player gets their own box */
   myNote: string;
   /** who has already written something, for the lobby roster */
@@ -187,6 +189,8 @@ export interface FamilyRoomState {
     surveyAnswerMaxChars: number;
     minPlayers: number;
     noteMaxChars: number;
+    minRounds: number;
+    maxRounds: number;
   };
 
   createdAt: string;

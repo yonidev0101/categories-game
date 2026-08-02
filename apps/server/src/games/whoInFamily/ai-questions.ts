@@ -86,6 +86,32 @@ const HEBREW = `
   • No English words, no transliteration, no emoji.
   • One line each. Never repeat an item or write two that mean the same thing.
   • Short enough to read at a glance, on a phone, by a 70-year-old.
+
+════════ CLARITY — the most common way these items fail ════════
+Every item must land the first time it is read, out loud, by anyone in the room.
+People are looking at a phone with a timer running; they will not re-read.
+
+  • ONE idea per item. One clause. If you need the word "ש" twice, or "וגם",
+    or "למרות ש", or "אבל" — you have written two items. Split or delete.
+  • Plain everyday Hebrew a child and a grandparent both use. No slang
+    ("הזוי", "זיצים", "בקטע של"), no clever wordplay, no irony that depends on
+    tone, nothing abstract or meta.
+  • Natural word order. Read it aloud in your head — if you stumble even once,
+    rewrite it simpler.
+  • Concrete over general. A thing you can picture beats a category.
+
+Real failures to learn from:
+  BAD:  "מי הכי סביר להתפלל שחבר משפחה לא יאחר שוב לתפילה"
+        (a clause inside a clause — nobody parses this in three seconds)
+  GOOD: "לאחר לתפילה בשבת בבוקר"
+
+  BAD:  "מה תמיד נכנס אצלי לרשימת קניות לשבת גם אם לא צריך בכלל"
+        (two ideas stapled together, and far too long)
+  GOOD: "המוצר שאני קונה כל שבוע בלי צורך"
+
+  BAD:  "התפקיד שלי הכי חשוב בערב שישי אצל מיכל"
+        (broken word order, and names a person)
+  GOOD: "התפקיד שלי בהכנות לשבת"
   • Proofread every sentence before returning it. It must be grammatically
     correct Hebrew that a native speaker would say out loud without stumbling.
     Check that no word is missing — especially the subject pronoun. Reject and
@@ -117,9 +143,10 @@ list, leave that part alone.`.trim();
 }
 
 const GENERIC_NOTE = `
-Nobody wrote anything about the family, so write questions that work for any
-Israeli family: everyday household life, food, phones, holidays, driving,
-shopping, sleep, and small domestic habits.`.trim();
+Nobody wrote anything about the family, so write items that fit any frum
+household: the Shabbos table, the Friday rush, cooking and the kitchen, hosting
+guests, Yom Tov preparations, shopping, waking up for davening, tidiness and
+mess, lost keys, and who falls asleep first.`.trim();
 
 /**
  * Same family, same description, same prompt would produce nearly the same
@@ -254,11 +281,12 @@ ${varietyBlock(usedQuestions)}
   if (!parsed) return null;
 
   const all = clean(parsed.surveyQuestions, asked);
-  const labels = all.filter((q) => !looksLikeQuestion(q));
 
-  // Prefer the label-shaped ones, then top up from the rest rather than
-  // shipping a short list — a question still plays fine, it is just less tidy.
-  const chosen = [...labels, ...all.filter((q) => looksLikeQuestion(q))].slice(0, count);
+  // Label-shaped and easy to read first; anything clumsy only if we run short.
+  const good = all.filter((q) => !looksLikeQuestion(q) && !isTangled(q, 8) && !hasSlang(q));
+  const rest = all.filter((q) => !good.includes(q)).sort(byClarity(8));
+
+  const chosen = [...good, ...rest].slice(0, count);
   return chosen.length >= 2 ? chosen : null;
 }
 
@@ -402,7 +430,7 @@ are used elsewhere in the game and quoting them would spoil that round.`
     : "The survey produced no usable answers, so rely on the description alone.";
 
   const user = `
-Write ${counts.mostLikely} "mostLikely" statements and ${counts.numbers} "numberQuestions" for one game.
+Write ${counts.mostLikely + 5} "mostLikely" statements and ${counts.numbers + 3} "numberQuestions" for one game.
 
 ${familyBlock(familyDescription, GENERIC_NOTE)}
 
@@ -414,9 +442,18 @@ ${varietyBlock(usedQuestions)}
   const parsed = await callOpenAi(apiKey, model, ROUNDS_PROMPT, user, ROUNDS_SCHEMA, "family_rounds", timeoutMs);
   if (!parsed) return null;
 
+  // Ask for extra, then keep the ones that read cleanly. Only fall back to the
+  // tangled ones if that would otherwise leave the game short of rounds.
+  const pick = (raw: unknown, want: number, maxWords: number) => {
+    const all = clean(raw, want + 8);
+    const good = all.filter((q) => !isTangled(q, maxWords) && !hasSlang(q));
+    const rest = all.filter((q) => !good.includes(q)).sort(byClarity(maxWords));
+    return [...good, ...rest].slice(0, want);
+  };
+
   const result: GeneratedRounds = {
-    mostLikely: clean(parsed.mostLikely, counts.mostLikely),
-    numberQuestions: clean(parsed.numberQuestions, counts.numbers),
+    mostLikely: pick(parsed.mostLikely, counts.mostLikely, 9),
+    numberQuestions: pick(parsed.numberQuestions, counts.numbers, 10),
   };
 
   // A thin response is worse than the curated file — treat it as a failure.
@@ -480,6 +517,48 @@ function clean(items: unknown, max: number): string[] {
     if (out.length >= max) break;
   }
   return out;
+}
+
+// NOTE: JavaScript's \b is defined on [A-Za-z0-9_], so it never matches at a
+// Hebrew word edge — a regex like /\bאבל\b/ silently never fires. Everything
+// below tokenises on whitespace instead, which is what actually works here.
+
+const tokens = (text: string) => text.trim().split(/\s+/).filter(Boolean);
+const wordCount = (text: string) => tokens(text).length;
+
+/** Words that almost always mean two ideas were stapled together. */
+const JOINERS = new Set(["וגם", "למרות", "אבל", "אלא", "ואילו", "בעוד", "אף"]);
+
+const SLANG_WORDS = new Set([
+  "הזוי", "הזויה", "זיצים", "בקטע", "וואלה", "אחלה", "סבבה", "פגז", "אש", "חבל",
+]);
+
+const strip = (word: string) => word.replace(/[.,!?;:״"'()]/g, "");
+
+/**
+ * Asking the model for short, single-clause items is not enough — it drifts.
+ * These are the checks that actually keep long, tangled items off the screen.
+ */
+function isTangled(text: string, maxWords: number): boolean {
+  const words = tokens(text).map(strip);
+  if (words.length > maxWords) return true;
+  if (words.some((w) => JOINERS.has(w))) return true;
+  // more than one subordinate clause reads as a sentence inside a sentence
+  const subordinate = words.filter((w) => /^ש[א-ת]/.test(w)).length;
+  return subordinate > 1;
+}
+
+function hasSlang(text: string): boolean {
+  return tokens(text).map(strip).some((w) => SLANG_WORDS.has(w));
+}
+
+/** Order by how easily an item reads: short and single-clause first. */
+function byClarity(maxWords: number) {
+  return (a: string, b: string) => {
+    const score = (t: string) => (isTangled(t, maxWords) ? 1 : 0) + (hasSlang(t) ? 1 : 0);
+    const diff = score(a) - score(b);
+    return diff !== 0 ? diff : wordCount(a) - wordCount(b);
+  };
 }
 
 function extractText(raw: Record<string, unknown>): string {
