@@ -271,6 +271,19 @@ function ScoreTag({
   );
 }
 
+/**
+ * Host-only escape hatch. One tap drops whatever is on screen — no scoring, no
+ * waiting for the timer. Deliberately not behind a confirmation: if a question
+ * needs to go, it needs to go now.
+ */
+function SkipButton({ onSkip, label = "דלגו על השאלה" }: { onSkip: () => void; label?: string }) {
+  return (
+    <button type="button" className="fm-skip" onClick={onSkip}>
+      ⤳ {label}
+    </button>
+  );
+}
+
 function Standings({ players, myId }: { players: FamilyPlayerInfo[]; myId: string | null }) {
   const ranked = [...players].sort((a, b) => b.score - a.score);
   return (
@@ -829,6 +842,7 @@ export function FamilyClient({ roomCode }: Props) {
           answeredIds={question.answeredIds}
           caption="ענו"
         />
+        {isHost && <SkipButton onSkip={() => emit("f_skip_round")} />}
       </footer>
     );
 
@@ -1013,6 +1027,7 @@ export function FamilyClient({ roomCode }: Props) {
         ) : (
           <p className="fm-dock-wait">חושפים…</p>
         )}
+        {isHost && <SkipButton onSkip={() => emit("f_skip_round")} label="לסבב הבא" />}
       </footer>,
     );
   }
@@ -1484,6 +1499,13 @@ function Styles() {
         padding-top: 4px;
       }
       .fm-dock-wait { margin: 0; text-align: center; font-size: 18px; color: #A98FBA; }
+      .fm-skip {
+        width: 100%; min-height: 52px; padding: 12px;
+        border-radius: 14px; border: 2px solid rgba(255,255,255,0.2);
+        background: transparent; color: #C9A9DC;
+        font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer;
+      }
+      .fm-skip:active { background: rgba(255,255,255,0.08); }
 
       .fm-roster { display: flex; flex-direction: column; gap: 8px; }
       .fm-roster-list {

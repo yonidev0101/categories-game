@@ -34,17 +34,48 @@ room, reading the questions out loud to each other.
 
 const SAFETY = `
 ════════ HARD SAFETY RULES ════════
-This is played by one family across three generations. A single wrong question
-ruins the evening. NEVER produce a question that touches:
-  • money, salary, debt, how much something cost, who paid
-  • weight, body size, appearance, looks, dieting
-  • health, illness, medication, death, or anyone who has died
-  • politics, elections, religion, or how observant someone is
-  • romance, exes, divorce, dating, or anything sexual
-  • school grades, career failure, or being unemployed
-  • any real conflict, grudge, or sore point that could restart an argument
-Tease habits and quirks, never a person's worth. If a detail you were given
-falls into any category above, silently ignore that detail.
+
+This game is played by a HAREDI (ultra-Orthodox Jewish) family, three
+generations in one room — grandparents, parents and children together. The
+standard is not "inoffensive"; it is content that would be entirely at home at
+a Shabbos table. When in doubt, leave it out. A single wrong item ends the
+evening and cannot be taken back.
+
+ABSOLUTELY FORBIDDEN — never allude to, hint at, or joke around:
+  • anything sexual, romantic, or physical between people — no dating, no
+    matchmaking beyond nothing, no exes, no marriage tension, no flirting,
+    no attraction, no body parts
+  • anything touching emunah — no questioning faith, no doubting Torah or
+    mitzvos, no "what if" about Hashem, no theological speculation, nothing
+    that could read as kefira, no mocking rabbonim, halacha or observance
+  • non-kosher food of any kind, or mixing meat and milk
+  • Shabbos or Yom Tov violation — no driving, phones, money, cooking, writing
+    or shopping on Shabbos, not even hypothetically or as a joke
+  • television, movies, secular music, celebrities, sports stars, video games
+  • immodesty — never about a woman's appearance, clothing, hair or body;
+    never about mixed-gender company
+  • gambling, alcohol beyond a normal kiddush, smoking, anything illegal
+
+ALSO FORBIDDEN, as in any family game:
+  • money, salary, debt, what something cost, who paid
+  • weight, body size, looks, dieting
+  • health, illness, medication, death, or anyone who has passed away
+  • politics and elections
+  • how observant someone is, or comparing anyone's level in ruchniyus
+  • school grades, career failure, being unemployed, shidduchim
+  • any real conflict or sore point that could restart an argument
+
+WHAT IS WELCOME — this is where the humour lives:
+  the Shabbos and Yom Tov table, zemiros, cholent, the Friday rush, hosting
+  guests, Pesach cleaning, the Seder, Sukkah building, Purim costumes and
+  mishloach manos, Chanukah candles, the kitchen, shopping before Shabbos,
+  waking up for davening, kids and grandchildren, family trips, lost keys and
+  glasses, being early or late, tidiness and mess, leftovers, who talks the
+  most, who falls asleep first.
+
+Tease habits and quirks, never a person's worth and never their Yiddishkeit.
+If anything you were told about this family falls into a forbidden category,
+silently ignore that detail — do not work around it, do not soften it, drop it.
 `.trim();
 
 const HEBREW = `
@@ -96,16 +127,16 @@ shopping, sleep, and small domestic habits.`.trim();
  * a rematch feel like a different game.
  */
 const ANGLES = [
-  "ארוחות משפחתיות ואוכל",
-  "טלפונים, מסכים והרגלי רשת",
-  "נסיעות, פקקים ואיך מגיעים למקומות",
+  "סעודות שבת והשולחן",
+  "ההכנות לשבת ביום שישי",
+  "פסח — הניקיונות והסדר",
+  "סוכות, פורים וחנוכה",
+  "המטבח, הבישולים והאורחים",
   "הבית — סדר, בלגן ותיקונים שלא נעשו",
-  "בקרים, שינה והתעוררות",
-  "חגים, אירועים ומשפחה מורחבת",
-  "קניות, סופר ודברים שקונים ולא צריך",
-  "מזג אוויר, חופשות וטיולים",
-  "טלוויזיה, סדרות ומוזיקה",
-  "ילדות, זיכרונות וסיפורים ישנים",
+  "בקרים, השכמה ותפילה בזמן",
+  "קניות לשבת ולחגים",
+  "נסיעות וטיולים משפחתיים",
+  "ילדות, זיכרונות וסיפורים מהסבים",
 ];
 
 function varietyBlock(usedQuestions: string[]) {
@@ -273,10 +304,12 @@ table. If you cannot picture the moment, delete it.
   BAD: "להיות הכי עצלן"                (an insult, not a scene)
 
 SPREAD the items roughly evenly across these axes:
-  • the rhythm of שבת and חגים — the meal, the זמירות, the פלטה, getting ready for פסח
+  • the rhythm of שבת and חגים — the meal, the זמירות, the פלטה, the Friday rush
+  • Yom Tov preparation — Pesach cleaning, the Seder, building the Sukkah,
+    Purim costumes and mishloach manos, Chanukah candles
   • universal household oddities — lost keys, glasses on the head, leftovers
-  • phone and technology habits — voice notes, replying two weeks later
-  • timing and lateness
+  • the kitchen and hosting guests
+  • timing and lateness — davening, the meal, leaving the house
   • generational habits — hoarding plastic bags, calling instead of texting
   • warm traits — first to clear the table, most excited by a small gift
 

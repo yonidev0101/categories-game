@@ -303,6 +303,35 @@ export class FamilyService {
     return rounds && rounds.numberQuestions.length > 0 ? rounds.numberQuestions : fileNumbers;
   }
 
+  /**
+   * The host can drop the question on screen instantly. Nothing is scored and
+   * the round is discarded — this exists so that an item nobody should have to
+   * read can be gone in one tap, without waiting for the timer.
+   */
+  skipRound(roomCode: string, playerId: string) {
+    const room = this.getRoom(roomCode);
+    this.assertHost(room, playerId);
+    if (room.phase !== "question" && room.phase !== "reveal") {
+      throw new Error("אפשר לדלג רק על שאלה שמוצגת עכשיו");
+    }
+
+    const skipped = this.currentRound(room);
+    if (skipped) {
+      // Never hand the same item out again, in this game or a rematch.
+      room.usedQuestions.push(skipped.prompt);
+      if (skipped.type === "A" && room.generatedRounds) {
+        room.generatedRounds.mostLikely = room.generatedRounds.mostLikely.filter((q) => q !== skipped.prompt);
+      }
+      if (skipped.type === "C" && room.generatedRounds) {
+        room.generatedRounds.numberQuestions = room.generatedRounds.numberQuestions.filter((q) => q !== skipped.prompt);
+      }
+    }
+
+    this.clearTimer(room);
+    this.nextRound(room);
+    return this.snap(room, playerId);
+  }
+
   resetRoom(roomCode: string, playerId: string) {
     const room = this.getRoom(roomCode);
     this.assertHost(room, playerId);

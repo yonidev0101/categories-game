@@ -750,6 +750,14 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("f_skip_round", ({ roomCode }: { roomCode: string }) => {
+    try {
+      familyService.skipRound(roomCode.toUpperCase(), String(socket.data.familyPlayerId));
+    } catch (error) {
+      socket.emit("error_message", { message: getErrorMessage(error) });
+    }
+  });
+
   socket.on("f_reset_room", ({ roomCode }: { roomCode: string }) => {
     try {
       familyService.resetRoom(roomCode.toUpperCase(), String(socket.data.familyPlayerId));
