@@ -27,12 +27,14 @@ import {
   COUPLE_MOST_LIKELY,
   COUPLE_NUMBERS,
   COUPLE_SURVEY_QUESTIONS,
+  COUPLE_OPEN_QUESTIONS,
 } from "../games/whoInFamily/content.js";
 import {
   generateSurveyQuestions,
   generateRoundQuestions,
   generateCoupleRounds,
   generateCoupleDecoys,
+  judgeCloseness,
   type GeneratedRounds,
   type GeneratedCouple,
   type SurveyAnswerMaterial,
@@ -111,6 +113,8 @@ interface StoredFamilyRoom {
   choices: Record<string, number>;
   /** D: playerId → the option index they think their partner picked */
   predictions: Record<string, number>;
+  /** E: playerId → the free text they wrote this round */
+  texts: Record<string, string>;
 
   source: FamilyQuestionSource;
   /** how many rounds this game runs, chosen by the host */
@@ -279,6 +283,7 @@ export class FamilyService {
       numbers: {},
       choices: {},
       predictions: {},
+      texts: {},
       subjectNumber: null,
       reveal: null,
       titles: [],
@@ -534,6 +539,7 @@ export class FamilyService {
     room.numbers = {};
     room.choices = {};
     room.predictions = {};
+    room.texts = {};
     room.subjectNumber = null;
     room.reveal = null;
     room.titles = [];
@@ -610,6 +616,20 @@ export class FamilyService {
 
     if (room.stage !== "predict") throw new Error("לא ניתן לענות עכשיו");
     room.predictions[playerId] = optionIndex;
+    this.emit(room.code);
+
+    if (this.answeredCount(room) >= this.expectedCount(room)) {
+      this.hurryUp(room, () => this.endQuestion(room));
+    }
+  }
+
+  /** Round E — both write freely; the AI decides how close the two answers are. */
+  submitText(roomCode: string, playerId: string, text: string) {
+    const room = this.getRoom(roomCode);
+    const round = this.currentRound(room);
+    if (room.phase !== "question" || !round || round.type !== "E") throw new Error("אין סבב פעיל");
+
+    room.texts[playerId] = text.trim().slice(0, CONFIG.COUPLE_OPEN_MAX_CHARS);
     this.emit(room.code);
 
     if (this.answeredCount(room) >= this.expectedCount(room)) {
@@ -919,7 +939,9 @@ export class FamilyService {
     // two decoys. The right answer is therefore always true of someone, which
     // is the whole problem with options invented by a model that never met them.
     const entries = shuffle(this.coupleSurveyEntries(room));
+    const openQuestions = drawCycling(COUPLE_OPEN_QUESTIONS, plan.length);
     let e = 0;
+    let o = 0;
 
     return plan.map((type) => {
       if (type === "D") {
@@ -946,6 +968,9 @@ export class FamilyService {
         // Nobody wrote anything for this one — fall back to a curated card.
         const card = choices[c++ % choices.length];
         return { type: "D" as const, prompt: card.question, options: [...card.options], optionOwners: card.options.map(() => null) };
+      }
+      if (type === "E") {
+        return { type: "E" as const, prompt: openQuestions[o++ % openQuestions.length] };
       }
       if (type === "C") {
         return {
@@ -982,7 +1007,10 @@ export class FamilyService {
 
     room.phase = "question";
 
-    if (round.type === "D") {
+    if (round.type === "E") {
+      room.stage = null;
+      this.schedule(room, CONFIG.COUPLE_OPEN_SECONDS, () => this.endQuestion(room));
+    } else if (round.type === "D") {
       // Both already answered in the survey; the round is only the guessing.
       room.stage = "predict";
       this.schedule(room, CONFIG.COUPLE_PREDICT_SECONDS, () => this.endQuestion(room));
@@ -1025,6 +1053,16 @@ export class FamilyService {
     const round = this.currentRound(room);
     if (!round) {
       this.endGame(room);
+      return;
+    }
+
+    // Round E has to ask the model how close the two answers were, so it
+    // finishes asynchronously. Everything else is decided right here.
+    if (round.type === "E") {
+      void this.finishOpenRound(room, round).catch((error) => {
+        console.error("[family] closeness scoring failed", error);
+        this.nextRound(room);
+      });
       return;
     }
 
@@ -1130,6 +1168,9 @@ export class FamilyService {
       votes,
       numbers: [],
       predictions: [],
+      texts: [],
+      closeness: null,
+      closenessNote: null,
       answerText: round.answerText ?? null,
       authorId: round.authorId ?? null,
       authorNickname: room.players.find((p) => p.id === round.authorId)?.nickname ?? null,
@@ -1167,6 +1208,70 @@ export class FamilyService {
     if (correct === 0) return `${author.nickname} כתב/ה את זה — ואף אחד לא ניחש.`;
     if (correct === voters) return `${author.nickname} כתב/ה את זה — וכולם ידעו.`;
     return `${author.nickname} כתב/ה את זה. ${correct} מתוך ${voters} ניחשו נכון.`;
+  }
+
+  /**
+   * Round E — there is no right answer, only how close the two of you landed.
+   * Both are awarded the same points, because this round is about the pair.
+   */
+  private async finishOpenRound(room: StoredFamilyRoom, round: PlannedRound) {
+    const [one, two] = room.players;
+    const firstText = one ? room.texts[one.id] ?? "" : "";
+    const secondText = two ? room.texts[two.id] ?? "" : "";
+
+    const { closeness, note } =
+      one && two
+        ? await judgeCloseness(
+            round.prompt,
+            { nickname: one.nickname, text: firstText },
+            { nickname: two.nickname, text: secondText },
+            this.aiApiKey,
+            this.surveyModel,
+          )
+        : { closeness: 0, note: "" };
+
+    // Someone may have reset or skipped while we were waiting on the model.
+    if (room.phase !== "question" || this.currentRound(room) !== round) return;
+
+    const points = new Map<string, number>();
+    const reasons = new Map<string, string>();
+    const award = Math.round((closeness / 100) * CONFIG.POINTS_E_MAX);
+
+    if (award > 0) {
+      for (const player of room.players) {
+        points.set(player.id, award);
+        reasons.set(player.id, `${closeness}% קרבה`);
+        player.score += award;
+      }
+    }
+
+    room.reveal = {
+      roundNumber: room.roundIndex + 1,
+      type: "E",
+      prompt: round.prompt,
+      votes: [],
+      numbers: [],
+      predictions: [],
+      texts: room.players.map((p) => ({
+        playerId: p.id,
+        nickname: p.nickname,
+        text: room.texts[p.id]?.trim() || "לא ענה/תה",
+      })),
+      closeness,
+      closenessNote: note,
+      answerText: null,
+      authorId: null,
+      authorNickname: null,
+      subjectNickname: null,
+      correctNumber: null,
+      pointsAwarded: this.formatPoints(room, points, reasons),
+      summary: note,
+    };
+
+    room.phase = "reveal";
+    room.stage = null;
+    this.schedule(room, CONFIG.REVEAL_SECONDS, () => this.nextRound(room));
+    this.emit(room.code);
   }
 
   /** Round D — you score by knowing what your partner picked, not by being right. */
@@ -1233,6 +1338,9 @@ export class FamilyService {
       votes: [],
       numbers: [],
       predictions,
+      texts: [],
+      closeness: null,
+      closenessNote: null,
       answerText: null,
       authorId: null,
       authorNickname: null,
@@ -1279,6 +1387,9 @@ export class FamilyService {
       votes: [],
       numbers: entries as FamilyNumberReveal[],
       predictions: [],
+      texts: [],
+      closeness: null,
+      closenessNote: null,
       answerText: null,
       authorId: null,
       authorNickname: null,
@@ -1559,6 +1670,9 @@ export class FamilyService {
           ? room.players.find((p) => p.id !== playerId)?.nickname ?? null
           : null,
 
+      myText: playerId ? room.texts[playerId] ?? null : null,
+      textMaxChars: CONFIG.COUPLE_OPEN_MAX_CHARS,
+
       myVote: playerId ? room.votes[playerId] ?? null : null,
       myNumber: playerId
         ? iAmSubject && room.stage === "subject_input"
@@ -1576,7 +1690,7 @@ export class FamilyService {
   private participantIds(room: StoredFamilyRoom): string[] {
     const round = this.currentRound(room);
     if (!round) return [];
-    if (round.type === "D") return room.players.map((p) => p.id);
+    if (round.type === "D" || round.type === "E") return room.players.map((p) => p.id);
     if (round.type === "A") return room.players.map((p) => p.id);
     if (round.type === "B") return room.players.filter((p) => p.id !== round.authorId).map((p) => p.id);
     if (room.stage === "subject_input") return round.subjectId ? [round.subjectId] : [];
@@ -1587,6 +1701,7 @@ export class FamilyService {
     const round = this.currentRound(room);
     if (!round) return [];
     const participants = new Set(this.participantIds(room));
+    if (round.type === "E") return Object.keys(room.texts);
     if (round.type === "D") return Object.keys(room.predictions);
     if (round.type !== "C") return Object.keys(room.votes).filter((id) => participants.has(id));
     if (room.stage === "subject_input") {
@@ -1605,6 +1720,7 @@ export class FamilyService {
   private answeredCount(room: StoredFamilyRoom): number {
     const round = this.currentRound(room);
     if (!round) return 0;
+    if (round.type === "E") return Object.keys(room.texts).length;
     if (round.type === "D") return Object.keys(room.predictions).length;
     if (round.type !== "C") return Object.keys(room.votes).length;
     if (room.stage === "subject_input") return room.subjectNumber === null ? 0 : 1;
@@ -1614,7 +1730,7 @@ export class FamilyService {
   private expectedCount(room: StoredFamilyRoom): number {
     const round = this.currentRound(room);
     if (!round) return 0;
-    if (round.type === "D") return room.players.length;
+    if (round.type === "D" || round.type === "E") return room.players.length;
     if (round.type === "A") return room.players.length;
     if (round.type === "B") return Math.max(0, room.players.length - 1);
     return room.stage === "subject_input" ? 1 : Math.max(0, room.players.length - 1);

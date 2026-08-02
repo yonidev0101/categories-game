@@ -763,6 +763,14 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("f_text", ({ roomCode, text }: { roomCode: string; text: string }) => {
+    try {
+      familyService.submitText(roomCode.toUpperCase(), String(socket.data.familyPlayerId), String(text ?? ""));
+    } catch (error) {
+      socket.emit("error_message", { message: getErrorMessage(error) });
+    }
+  });
+
   socket.on("f_number", ({ roomCode, value }: { roomCode: string; value: number }) => {
     try {
       familyService.submitNumber(roomCode.toUpperCase(), String(socket.data.familyPlayerId), Number(value));

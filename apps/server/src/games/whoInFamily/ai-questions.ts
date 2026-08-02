@@ -609,6 +609,31 @@ Every option must still be something a real person would actually pick — funny
 not absurd. If one option is clearly the joke answer nobody would choose, the
 round collapses to three options.
 
+════════ VARIETY — read this twice ════════
+The single most common failure is writing the same item over and over in
+different words. It happens because you latch onto the two or three facts the
+couple wrote about themselves and keep circling them.
+
+  • Use each fact from their notes AT MOST ONCE across the whole set. If they
+    mentioned lateness, exactly one item may be about lateness.
+  • No two items may be about the same habit, moment or trait.
+  • Vary the SHAPE of the sentence, not just the words. If three items in a row
+    begin "מה עשיתי כש...", you have written one item three times.
+    Rotate between: "מה...", "איזה...", "מתי...", "איפה...", "כמה...",
+    and plain noun phrases with no question word at all.
+
+SPREAD across these areas, at most two items from any one of them:
+  • the house — mess, repairs never done, who fixes what
+  • the kitchen — cooking, leftovers, what always runs out
+  • שבת and חגים — the table, guests, the Friday rush, Yom Tov prep
+  • the car and travelling — directions, packing, who drives
+  • mornings, waking up, getting out of the house
+  • shopping and errands
+  • the children and grandchildren
+  • memories — how you met, the wedding, the first apartment
+  • how you disagree, and who gives in first
+  • small kindnesses and the things you do for each other
+
 ════════ WHAT THIS GAME MAY TALK ABOUT ════════
 Unlike the family game, here you MAY write warmly about the marriage itself:
 how they met, the wedding, what each of them values in the other, small
@@ -798,6 +823,94 @@ ${familyBlock(description, "You were told nothing else about this couple — rel
   }
 
   return map.size > 0 ? map : null;
+}
+
+// ─── Round E — how close were the two answers ────────────────────────────────
+
+const CLOSENESS_PROMPT = `
+A married couple were both asked the same open question and each wrote a short
+answer without seeing the other's. Judge how close the two answers are in
+MEANING, and say it in one warm Hebrew line.
+
+  0    completely different ideas
+  50   same general direction, different specifics
+  100  the same thing, even if worded differently
+
+Judge meaning, never wording. "לשבת בשקט עם תה" and "ערב רגוע בבית בלי אף אחד"
+are the same idea and score high. "לצאת לטייל" and "להישאר בבית" are opposites
+and score low, however similar the words look.
+
+The note is one short Hebrew sentence spoken to the couple, warm and specific
+to what they wrote. Never scold, never say one of them is wrong — there is no
+wrong answer here.
+  high:   "שניכם כתבתם על שקט בבית. אותו ערב בדיוק."
+  middle: "שניכם רוצים לצאת — רק לא לאותו מקום."
+  low:    "אחד רוצה שקט והשני רוצה אנשים. יש על מה לדבר."
+
+Plain Hebrew only in the note — no slang, not "בקטע של", not "אחלה". It is read
+out loud at their table.
+
+${HEBREW}
+`.trim();
+
+const CLOSENESS_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    closeness: { type: "integer" },
+    note: { type: "string" },
+  },
+  required: ["closeness", "note"],
+};
+
+/** Rough word-overlap score, used when the model is unavailable or too slow. */
+function overlapCloseness(a: string, b: string): number {
+  const words = (s: string) =>
+    new Set(
+      s.toLowerCase().replace(/[.,!?;:״"'()]/g, " ").split(/\s+/)
+        .filter((w) => w.length > 2)
+        .map((w) => w.replace(/^[והבכלמש]/, "")),
+    );
+  const A = words(a);
+  const B = words(b);
+  if (A.size === 0 || B.size === 0) return 0;
+  let shared = 0;
+  for (const w of A) if (B.has(w)) shared += 1;
+  return Math.round((shared / Math.min(A.size, B.size)) * 100);
+}
+
+export async function judgeCloseness(
+  question: string,
+  first: { nickname: string; text: string },
+  second: { nickname: string; text: string },
+  apiKey: string,
+  model: string,
+  timeoutMs = 12_000,
+): Promise<{ closeness: number; note: string }> {
+  const fallback = () => {
+    const score = overlapCloseness(first.text, second.text);
+    return {
+      closeness: score,
+      note: score >= 60 ? "כתבתם כמעט אותו דבר." : score >= 25 ? "יש כאן קו משותף." : "שתי תשובות שונות לגמרי.",
+    };
+  };
+
+  if (!apiKey || !first.text.trim() || !second.text.trim()) return fallback();
+
+  const user = `
+question: "${question}"
+${first.nickname}: "${first.text}"
+${second.nickname}: "${second.text}"
+`.trim();
+
+  const parsed = await callOpenAi(apiKey, model, CLOSENESS_PROMPT, user, CLOSENESS_SCHEMA, "closeness", timeoutMs);
+  if (!parsed) return fallback();
+
+  const closeness = typeof parsed.closeness === "number" ? Math.max(0, Math.min(100, Math.round(parsed.closeness))) : null;
+  const note = typeof parsed.note === "string" ? parsed.note.trim() : "";
+  if (closeness === null) return fallback();
+
+  return { closeness, note: note || fallback().note };
 }
 
 // ─── Plumbing ────────────────────────────────────────────────────────────────

@@ -22,6 +22,7 @@ import type { FamilySnapshot, FamilyPlayerInfo, FamilyRoundType } from "@categor
 const ROUND_LABEL: Record<FamilyRoundType, string> = {
   A: "על מי מדובר",
   D: "מה ענית",
+  E: "כמה אנחנו דומים",
   B: "הפתק",
   C: "המספר",
 };
@@ -489,6 +490,7 @@ export function FamilyClient({ roomCode }: Props) {
   const [surveyDraft, setSurveyDraft] = useState("");
   const [editingSurvey, setEditingSurvey] = useState(false);
   const [numberDraft, setNumberDraft] = useState("");
+  const [openDraft, setOpenDraft] = useState("");
   const [revealed, setRevealed] = useState(0);
   const [copied, setCopied] = useState(false);
   const [familyDraft, setFamilyDraft] = useState("");
@@ -555,12 +557,13 @@ export function FamilyClient({ roomCode }: Props) {
   const roundKey = `${room?.roundNumber}:${question?.stage ?? ""}`;
   useEffect(() => {
     setNumberDraft(question?.myNumber !== null && question?.myNumber !== undefined ? String(question.myNumber) : "");
+    setOpenDraft(question?.myText ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roundKey]);
 
   // ── Reveal, one row at a time, lowest first ───────────────────────────────
   const reveal = room?.reveal ?? null;
-  const revealCount = (reveal?.votes.length ?? 0) + (reveal?.numbers.length ?? 0) + (reveal?.predictions.length ?? 0);
+  const revealCount = (reveal?.votes.length ?? 0) + (reveal?.numbers.length ?? 0) + (reveal?.predictions.length ?? 0) + (reveal?.texts.length ?? 0);
   useEffect(() => {
     if (!reveal) { setRevealed(0); return; }
     setRevealed(0);
@@ -614,7 +617,7 @@ export function FamilyClient({ roomCode }: Props) {
   useEffect(() => {
     const rv = room?.reveal;
     if (!rv || phase !== "reveal") return;
-    const total = rv.votes.length + rv.numbers.length + rv.predictions.length;
+    const total = rv.votes.length + rv.numbers.length + rv.predictions.length + rv.texts.length;
     if (revealed < total || scoredThisReveal.current === rv.roundNumber) return;
     scoredThisReveal.current = rv.roundNumber;
     const mine = rv.pointsAwarded.find((p) => p.playerId === myId)?.points ?? 0;
@@ -1003,6 +1006,38 @@ export function FamilyClient({ roomCode }: Props) {
     );
 
     // D — answer for yourself, then guess what your partner answered
+    // E — both write freely, and the AI decides how close you landed
+    if (question.type === "E") {
+      return shell(
+        <Note fraction={fraction} secondsLeft={secondsLeft}>
+          <p className="fm-kicker">שניכם עונים — אין תשובה נכונה</p>
+          <h1 className="fm-question">{question.prompt}</h1>
+          <textarea
+            className="fm-write"
+            value={openDraft}
+            onChange={(e) => setOpenDraft(e.target.value.slice(0, question.textMaxChars))}
+            placeholder="כתבו במשפט אחד…"
+            rows={3}
+            aria-label="התשובה שלך"
+          />
+          <div className="fm-write-foot">
+            <span className="fm-count">{openDraft.length}/{question.textMaxChars}</span>
+            <span className="fm-hint">ככל שתכוונו לאותו דבר — יותר נקודות</span>
+          </div>
+          <button
+            type="button"
+            className="fm-action"
+            onClick={() => emit("f_text", { text: openDraft })}
+            disabled={!openDraft.trim()}
+          >
+            {question.myText ? "עדכנו" : "שלחו"}
+          </button>
+        </Note>,
+        railNode,
+        dock,
+      );
+    }
+
     if (question.type === "D") {
       return shell(
         <>
@@ -1173,7 +1208,23 @@ export function FamilyClient({ roomCode }: Props) {
           {finished && <p className="fm-verdict">{reveal.summary}</p>}
         </Note>
 
+        {reveal.type === "E" && reveal.closeness !== null && revealed >= revealCount && (
+          <Note tone="quiet">
+            <p className="fm-know">{reveal.closeness}%</p>
+            <p className="fm-body">{reveal.closenessNote}</p>
+          </Note>
+        )}
+
         <ul className="fm-results">
+          {reveal.texts.slice(0, revealed).map((row) => (
+            <li key={row.playerId} className="fm-result">
+              <Avatar players={room.players} id={row.playerId} nickname={row.nickname} size={38} />
+              <span className="fm-predict">
+                <span className="fm-predict-name">{row.nickname}</span>
+                <span className="fm-predict-choice">{row.text}</span>
+              </span>
+            </li>
+          ))}
           {reveal.predictions.slice(0, revealed).map((row) => (
             <li key={row.playerId} className={`fm-result${row.correct ? " fm-result-hit" : ""}`}>
               <Avatar players={room.players} id={row.playerId} nickname={row.nickname} size={38} />

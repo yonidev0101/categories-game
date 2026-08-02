@@ -15,7 +15,7 @@ export type FamilyMode = "family" | "couple";
  * A = "מי הכי סביר ש..."   B = "מי כתב את זה?"   C = "מה המספר?"
  * D = "מה ענית?" — both answer about themselves, then predict each other
  */
-export type FamilyRoundType = "A" | "B" | "C" | "D";
+export type FamilyRoundType = "A" | "B" | "C" | "D" | "E";
 
 /**
  * C: the subject types a number, then everyone guesses it.
@@ -77,6 +77,11 @@ export interface FamilyQuestionView {
   myPrediction: number | null;
   /** Round D — my partner's name, shown while predicting */
   partnerNickname: string | null;
+
+  /** Round E — free text both write; restored on reconnect */
+  myText: string | null;
+  /** Round E — how long the answer may be */
+  textMaxChars: number;
 
   /** my answer so far — restored on reconnect so I never vote twice */
   myVote: string | null;
@@ -140,6 +145,12 @@ export interface FamilyRevealView {
   numbers: FamilyNumberReveal[];
   /** round D */
   predictions: FamilyPredictionReveal[];
+  /** round E — what each wrote, and how close the two answers were */
+  texts: Array<{ playerId: string; nickname: string; text: string }>;
+  /** round E — 0 to 100, or null outside this round */
+  closeness: number | null;
+  /** round E — one line explaining the score */
+  closenessNote: string | null;
 
   /** round B */
   answerText: string | null;
