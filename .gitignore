@@ -10,3 +10,8 @@ coverage
 .claude/
 server-build.log
 web-build.log
+
+# stray editor backups
+*.bak
+*.bak2
+*.tsbuildinfo

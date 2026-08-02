@@ -4,6 +4,7 @@ export interface StoredSession {
   roomCode: string;
   playerId: string;
   sessionToken: string;
+  gameType?: "categories" | "personality" | "taboo" | "codenames" | "family";
 }
 
 export function getRoomStorageKey(roomCode: string): string {

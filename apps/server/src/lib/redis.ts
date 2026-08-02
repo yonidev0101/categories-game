@@ -10,9 +10,20 @@ export class RedisCoordinator {
       return;
     }
 
-    this.client = createClient({ url: this.url });
+    // Fail fast instead of retrying forever: Redis is optional, and a server
+    // that never finishes booting is far worse than one running without it.
+    this.client = createClient({
+      url: this.url,
+      socket: { connectTimeout: 3000, reconnectStrategy: false },
+    }) as RedisClientType;
     this.client.on("error", () => undefined);
-    await this.client.connect();
+
+    try {
+      await this.client.connect();
+    } catch (error) {
+      this.client = null;
+      throw error;
+    }
   }
 
   async publishRoomUpdate(roomCode: string, payload: unknown): Promise<void> {

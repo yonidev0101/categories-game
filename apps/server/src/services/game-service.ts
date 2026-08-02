@@ -1,4 +1,4 @@
-﻿import {
+import {
   buildPlayerProgress,
   computeCategoryPresenceMap,
   computeDuplicateMap,
@@ -12,7 +12,6 @@
   rankPlayers,
   scoreAnswers,
   totalScore,
-  type AIValidationResult,
   type CreateRoomInput,
   type RoomSettings,
   type RoomStateSnapshot,
@@ -53,8 +52,6 @@ interface StoredRoom {
   createdAt: string;
 }
 
-type HostAnswerOutcome = "valid_normal" | "valid_duplicate" | "valid_unique" | "invalid";
-
 interface GameEvents {
   onRoomState?: (roomCode: string, snapshot: RoomStateSnapshot) => void;
   onCountdown?: (roomCode: string, endsAt: string) => void;
@@ -62,6 +59,8 @@ interface GameEvents {
   onRoundResults?: (roomCode: string, scoreboard: ScoreBreakdown[]) => void;
   onGameResults?: (roomCode: string, scoreboard: ScoreBreakdown[]) => void;
 }
+
+type HostAnswerOutcome = "valid_normal" | "valid_duplicate" | "valid_unique" | "invalid";
 
 export class GameService {
   private readonly rooms = new Map<string, StoredRoom>();
@@ -76,8 +75,13 @@ export class GameService {
 
   async createRoom(input: CreateRoomInput) {
     const nickname = (input.nickname ?? "").trim();
-    if (!nickname || nickname.length < 2) throw new Error("שם שחקן קצר מדי — לפחות 2 תווים");
-    if (nickname.length > 20) throw new Error("שם שחקן ארוך מדי — עד 20 תווים");
+    if (!nickname || nickname.length < 2) {
+      throw new Error("שם שחקן קצר מדי — לפחות 2 תווים");
+    }
+    if (nickname.length > 20) {
+      throw new Error("שם שחקן ארוך מדי — עד 20 תווים");
+    }
+
     const settings = mergeSettings(input.settings);
     const hostPlayer = this.createPlayer(nickname, true);
     const room: StoredRoom = {
@@ -95,7 +99,7 @@ export class GameService {
       round: null,
       scoreboard: [],
       submissions: new Map(),
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString()
     };
 
     this.rooms.set(room.code, room);
@@ -106,8 +110,13 @@ export class GameService {
 
   async joinRoom(roomCode: string, nicknameRaw: string) {
     const nickname = (nicknameRaw ?? "").trim();
-    if (!nickname || nickname.length < 2) throw new Error("שם שחקן קצר מדי — לפחות 2 תווים");
-    if (nickname.length > 20) throw new Error("שם שחקן ארוך מדי — עד 20 תווים");
+    if (!nickname || nickname.length < 2) {
+      throw new Error("שם שחקן קצר מדי — לפחות 2 תווים");
+    }
+    if (nickname.length > 20) {
+      throw new Error("שם שחקן ארוך מדי — עד 20 תווים");
+    }
+
     const room = this.getRoomOrThrow(roomCode);
     const existing = room.players.find((player) => player.nickname === nickname);
     if (existing) {
@@ -274,24 +283,6 @@ export class GameService {
     this.emitRoomState(room.code);
   }
 
-    async hostOverrideAnswer(roomCode: string, hostPlayerId: string, targetPlayerId: string, categoryId: string) {
-    const room = this.getRoomOrThrow(roomCode);
-    this.assertHost(room, hostPlayerId);
-
-    if (room.phase !== "round_results" && room.phase !== "game_over") {
-      throw new Error("ניתן לאשר תשובות רק לאחר סיום הסיבוב");
-    }
-
-    const entry = room.scoreboard.find((s) => s.playerId === targetPlayerId);
-    if (!entry) throw new Error("שחקן לא נמצא");
-
-    const answer = entry.answers.find((a) => a.categoryId === categoryId);
-    // Only override answers that: exist, are not already valid, passed the letter rule
-    if (!answer || answer.isValid || !answer.isRuleValid) return;
-
-    await this.hostSetAnswerOutcome(roomCode, hostPlayerId, targetPlayerId, categoryId, "valid_normal");
-  }
-
   async hostSetAnswerOutcome(
     roomCode: string,
     hostPlayerId: string,
@@ -301,16 +292,23 @@ export class GameService {
   ) {
     const room = this.getRoomOrThrow(roomCode);
     this.assertHost(room, hostPlayerId);
-
     if (room.phase !== "round_results" && room.phase !== "game_over") {
       throw new Error("ניתן לעדכן תשובות רק לאחר סיום הסיבוב");
     }
 
-    const entry = room.scoreboard.find((s) => s.playerId === targetPlayerId);
-    if (!entry) throw new Error("שחקן לא נמצא");
+    const entry = room.scoreboard.find((item) => item.playerId === targetPlayerId);
+    if (!entry) {
+      throw new Error("שחקן לא נמצא");
+    }
 
-    const answer = entry.answers.find((a) => a.categoryId === categoryId);
-    if (!answer) throw new Error("תשובה לא נמצאה");
+    const answer = entry.answers.find((item) => item.categoryId === categoryId);
+    if (!answer) {
+      throw new Error("תשובה לא נמצאה");
+    }
+
+    if (!normalizeAnswer(answer.answer) && outcome !== "invalid") {
+      throw new Error("אין תשובה לאשר");
+    }
 
     const previousScore = answer.score;
     const isValid = outcome !== "invalid";
@@ -328,47 +326,34 @@ export class GameService {
     const delta = score - previousScore;
     entry.totalScore += delta;
 
-    const player = room.players.find((p) => p.id === targetPlayerId);
-    if (player) player.score += delta;
+    const player = room.players.find((item) => item.id === targetPlayerId);
+    if (player) {
+      player.score += delta;
+    }
 
     room.players = rankPlayers(room.players);
     await this.persistRoom(this.toSnapshot(room, hostPlayerId));
     this.emitRoomState(room.code);
   }
-    const entry = room.scoreboard.find((s) => s.playerId === targetPlayerId);
-    if (!entry) throw new Error("שחקן לא נמצא");
 
-    const answer = entry.answers.find((a) => a.categoryId === categoryId);
-    // Only override answers that: exist, are not already valid, passed the letter rule
-    if (!answer || answer.isValid || !answer.isRuleValid) return;
+  async hostOverrideAnswer(roomCode: string, hostPlayerId: string, targetPlayerId: string, categoryId: string) {
+    const room = this.getRoomOrThrow(roomCode);
+    this.assertHost(room, hostPlayerId);
+    if (room.phase !== "round_results" && room.phase !== "game_over") {
+      throw new Error("ניתן לאשר תשובות רק לאחר סיום הסיבוב");
+    }
 
-    // Recalculate the correct score using the stored submission maps
-    const allSubmissions = Array.from(room.submissions.values());
-    const duplicateMap = computeDuplicateMap(allSubmissions, room.settings.categories);
-    const categoryPresenceMap = computeCategoryPresenceMap(allSubmissions, room.settings.categories);
+    const entry = room.scoreboard.find((item) => item.playerId === targetPlayerId);
+    if (!entry) {
+      throw new Error("שחקן לא נמצא");
+    }
 
-    const answeredCount = categoryPresenceMap.get(categoryId) ?? 0;
-    const isDuplicate =
-      answer.normalizedAnswer.length > 0 &&
-      (duplicateMap.get(`${categoryId}:${answer.normalizedAnswer}`) ?? 0) > 1;
-    const newScore = answeredCount <= 1 ? 15 : isDuplicate ? 5 : 10;
+    const answer = entry.answers.find((item) => item.categoryId === categoryId);
+    if (!answer || answer.isValid || !answer.isRuleValid) {
+      return;
+    }
 
-    // Apply override
-    answer.isCategoryFit = true;
-    answer.isValid = true;
-    answer.isDuplicate = isDuplicate;
-    answer.score = newScore;
-    answer.isHostOverride = true;
-    answer.reason = "אושר ידנית על ידי המארח";
-
-    entry.totalScore += newScore;
-
-    const player = room.players.find((p) => p.id === targetPlayerId);
-    if (player) player.score += newScore;
-
-    room.players = rankPlayers(room.players);
-    await this.persistRoom(this.toSnapshot(room, hostPlayerId));
-    this.emitRoomState(room.code);
+    await this.hostSetAnswerOutcome(roomCode, hostPlayerId, targetPlayerId, categoryId, "valid_normal");
   }
 
   async getRoomState(roomCode: string, playerId?: string | null): Promise<RoomStateSnapshot> {
@@ -380,28 +365,28 @@ export class GameService {
     const rooms = Array.from(this.rooms.values());
     return {
       totalRooms: rooms.length,
-      activeRooms: rooms.filter((r) => r.phase !== "game_over").length,
-      totalPlayers: rooms.reduce((sum, r) => sum + r.players.length, 0),
-      onlinePlayers: rooms.reduce((sum, r) => sum + r.players.filter((p) => p.isOnline).length, 0),
+      activeRooms: rooms.filter((room) => room.phase !== "game_over").length,
+      totalPlayers: rooms.reduce((sum, room) => sum + room.players.length, 0),
+      onlinePlayers: rooms.reduce((sum, room) => sum + room.players.filter((p) => p.isOnline).length, 0),
       generatedAt: new Date().toISOString(),
       rooms: rooms
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .map((r) => ({
-          code: r.code,
-          phase: r.phase,
-          mode: r.settings.mode,
-          currentRoundNumber: r.currentRoundNumber,
-          roundsCount: r.settings.roundsCount,
-          playerCount: r.players.length,
-          onlineCount: r.players.filter((p) => p.isOnline).length,
-          createdAt: r.createdAt,
-          players: r.players.map((p) => ({
-            nickname: p.nickname,
-            isHost: p.isHost,
-            isOnline: p.isOnline,
-            score: p.score,
-          })),
-        })),
+        .map((room) => ({
+          code: room.code,
+          phase: room.phase,
+          mode: room.settings.mode,
+          currentRoundNumber: room.currentRoundNumber,
+          roundsCount: room.settings.roundsCount,
+          playerCount: room.players.length,
+          onlineCount: room.players.filter((p) => p.isOnline).length,
+          createdAt: room.createdAt,
+          players: room.players.map((player) => ({
+            nickname: player.nickname,
+            isHost: player.isHost,
+            isOnline: player.isOnline,
+            score: player.score
+          }))
+        }))
     };
   }
 
@@ -485,55 +470,49 @@ export class GameService {
     this.events.onAnswersLocked?.(room.code);
     this.emitRoomState(room.code);
 
-    const allSubmissions = Array.from(room.submissions.values());
-    const duplicateMap = computeDuplicateMap(allSubmissions, room.settings.categories);
-    const categoryPresenceMap = computeCategoryPresenceMap(allSubmissions, room.settings.categories);
-
-    // ONE batched AI call for all players instead of one per player
-    const submissionEntries = room.players.map((p) => ({
-      playerId: p.id,
-      answers: room.submissions.get(p.id) ?? {},
+    const duplicateMap = computeDuplicateMap(Array.from(room.submissions.values()), room.settings.categories);
+    const categoryPresenceMap = computeCategoryPresenceMap(Array.from(room.submissions.values()), room.settings.categories);
+    const scoreboard: ScoreBreakdown[] = [];
+    const submissionEntries = room.players.map((player) => ({
+      playerId: player.id,
+      answers: room.submissions.get(player.id) ?? {}
     }));
 
-    let validationByPlayer: Map<string, AIValidationResult[]>;
+    let validationByPlayer = new Map<string, Array<{ categoryId: string; isCategoryFit: boolean; confidence: number; reason: string }>>();
     let rawResponse: unknown = { fallback: true };
 
     try {
-      const result = await this.aiValidator.validateAllSubmissions({
+      const validation = await this.aiValidator.validateAllSubmissions({
         letter: room.round.letter,
         mode: room.settings.mode,
         categories: room.settings.categories,
-        submissions: submissionEntries,
+        submissions: submissionEntries
       });
-      validationByPlayer = result.byPlayer;
-      rawResponse = result.rawResponse;
-    } catch (err) {
-      console.error("AI validation failed, using fallback:", err);
-      rawResponse = { fallback: true, reason: String(err) };
-      // Fallback: non-empty answer → treat as valid category fit
-      validationByPlayer = new Map(
-        room.players.map((p) => {
-          const answers = room.submissions.get(p.id) ?? {};
-          return [p.id, room.settings.categories.map((cat) => ({
-            categoryId:    cat.id,
-            isCategoryFit: (answers[cat.id] ?? "").trim().length > 0,
-            confidence:    0.5,
-            reason:        "fallback — שגיאת AI",
-          }))];
-        }),
-      );
+      validationByPlayer = validation.byPlayer;
+      rawResponse = validation.rawResponse;
+    } catch {
+      rawResponse = { fallback: true, reason: "validation_failed" };
+      for (const entry of submissionEntries) {
+        const fallback = room.settings.categories.map((category) => ({
+          categoryId: category.id,
+          isCategoryFit: !!entry.answers[category.id],
+          confidence: 0.5,
+          reason: "לא הוגשה תשובה או שבוצע fallback"
+        }));
+        validationByPlayer.set(entry.playerId, fallback);
+      }
     }
-
-    const scoreboard: ScoreBreakdown[] = [];
 
     for (const player of room.players) {
       const answers = room.submissions.get(player.id) ?? {};
-      const aiResults = validationByPlayer.get(player.id) ?? room.settings.categories.map((cat) => ({
-        categoryId:    cat.id,
-        isCategoryFit: (answers[cat.id] ?? "").trim().length > 0,
-        confidence:    0.5,
-        reason:        "fallback",
-      }));
+      const aiResults =
+        validationByPlayer.get(player.id) ??
+        room.settings.categories.map((category) => ({
+          categoryId: category.id,
+          isCategoryFit: !!answers[category.id],
+          confidence: 0.5,
+          reason: "לא הוגשה תשובה או שבוצע fallback"
+        }));
 
       const validatedAnswers = scoreAnswers({
         answers,
@@ -542,7 +521,7 @@ export class GameService {
         letter: room.round.letter,
         mode: room.settings.mode,
         duplicateMap,
-        categoryPresenceMap,
+        categoryPresenceMap
       });
       const total = totalScore(validatedAnswers);
       player.score += total;
@@ -550,20 +529,19 @@ export class GameService {
         playerId: player.id,
         roundNumber: room.currentRoundNumber,
         totalScore: total,
-        answers: validatedAnswers,
+        answers: validatedAnswers
+      });
+
+      await this.mongo.saveValidationLog({
+        roomId: room.id,
+        roundNumber: room.currentRoundNumber,
+        playerId: player.id,
+        model: process.env.OPENAI_MODEL ?? "gpt-4.1-mini",
+        promptVersion: "v1",
+        rawResponse,
+        finalizedAt: new Date().toISOString()
       });
     }
-
-    // One log entry for the whole round
-    await this.mongo.saveValidationLog({
-      roomId: room.id,
-      roundNumber: room.currentRoundNumber,
-      playerId: "batch",
-      model: process.env.OPENAI_MODEL ?? "gpt-4.1-mini",
-      promptVersion: "v2-batch",
-      rawResponse,
-      finalizedAt: new Date().toISOString(),
-    });
 
     room.scoreboard = scoreboard;
     room.players = rankPlayers(room.players);
@@ -682,4 +660,3 @@ export class GameService {
     }
   }
 }
-

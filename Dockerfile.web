@@ -10,6 +10,13 @@ COPY apps/web/lib ./apps/web/lib
 COPY packages/shared/src ./packages/shared/src
 
 RUN npm ci
+
+# NEXT_PUBLIC_* values are baked into the bundle at build time, so they have to
+# be present here — not only at runtime. Railway passes service variables to the
+# build as args; without this the client would fall back to the hardcoded URL.
+ARG NEXT_PUBLIC_SERVER_URL
+ENV NEXT_PUBLIC_SERVER_URL=$NEXT_PUBLIC_SERVER_URL
+
 RUN npm --workspace @categories-game/web run build
 
 FROM node:22-alpine AS runner

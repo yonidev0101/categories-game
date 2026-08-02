@@ -5,6 +5,7 @@ import {
   type ChangeEvent, type CSSProperties, type MutableRefObject
 } from "react";
 import type { RoomSettings, RoomStateSnapshot, ScoreBreakdown, SubmissionPayload, ValidatedAnswer } from "@categories-game/shared";
+import { HEBREW_LETTERS } from "@categories-game/shared";
 import { getRoomState, rerollRoomLetters, startRoom, updateRoomSettings } from "../lib/api";
 import { getSocket } from "../lib/socket";
 import { readSession } from "../lib/storage";
@@ -224,6 +225,7 @@ export function RoomClient({ roomCode }: { roomCode: string }) {
   const [session] = useState(() => readSession(roomCode));
   const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState<"start" | "finish" | "next" | "save" | "reroll" | null>(null);
+  const [rollingLetter, setRollingLetter] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [muted, setMuted] = useState(false);
   const [floatingReactions, setFloatingReactions] = useState<FloatingReaction[]>([]);
@@ -245,6 +247,40 @@ export function RoomClient({ roomCode }: { roomCode: string }) {
     return [...snapshot.room.players].sort((a, b) => b.score !== a.score ? b.score - a.score : b.progressCount - a.progressCount);
   }, [snapshot]);
   const elapsed = useElapsed(snapshot?.round?.startsAt);
+
+  // Letter roulette effect on new round letters
+  useEffect(() => {
+    const active = snapshot?.room.activeLetter;
+    if (!active) {
+      setRollingLetter(null);
+      return;
+    }
+
+    const mode = snapshot?.room.settings.mode ?? "classic";
+    const start = Date.now();
+    const durationMs = 1200;
+    const intervalMs = 60;
+
+    const pickPair = () => {
+      const first = HEBREW_LETTERS[Math.floor(Math.random() * HEBREW_LETTERS.length)];
+      let second = HEBREW_LETTERS[Math.floor(Math.random() * HEBREW_LETTERS.length)];
+      while (second === first) {
+        second = HEBREW_LETTERS[Math.floor(Math.random() * HEBREW_LETTERS.length)];
+      }
+      return `${first} + ${second}`;
+    };
+
+    const id = setInterval(() => {
+      if (Date.now() - start >= durationMs) {
+        clearInterval(id);
+        setRollingLetter(null);
+        return;
+      }
+      setRollingLetter(mode === "advanced" ? pickPair() : HEBREW_LETTERS[Math.floor(Math.random() * HEBREW_LETTERS.length)]);
+    }, intervalMs);
+
+    return () => clearInterval(id);
+  }, [snapshot?.room.activeLetter, snapshot?.room.settings.mode]);
 
   // ── Effects ──────────────────────────────────────────────────────
   useEffect(() => { setHydrated(true); }, []);
@@ -543,6 +579,7 @@ export function RoomClient({ roomCode }: { roomCode: string }) {
     const isCountdown = phase === "countdown";
     const finishedCount = room.players.filter((p) => p.hasFinishedRound).length;
     const iDone = me?.hasFinishedRound ?? false;
+    const displayLetter = rollingLetter ?? room.activeLetter ?? "–";
 
     return (
       <main className="room-shell">
@@ -575,7 +612,7 @@ export function RoomClient({ roomCode }: { roomCode: string }) {
         {/* Letter */}
         <div className="panel letter-stage">
           <span className="letter-stage-label">{room.settings.mode === "classic" ? "האות של הסיבוב" : "שתי האותיות"}</span>
-          <div className="letter-stage-value" key={room.activeLetter}>{room.activeLetter ?? "–"}</div>
+          <div className="letter-stage-value" key={displayLetter}>{displayLetter}</div>
           <span className="letter-stage-rule">{room.settings.mode === "classic" ? "כל תשובה חייבת להתחיל באות זו" : "כל תשובה חייבת להכיל את שתי האותיות"}</span>
           {isHost && phase === "in_round" ? (
             <button className="button-ghost reroll-btn" type="button" onClick={() => void handleRerollLetters()} disabled={busy !== null}>{busy === "reroll" ? "מרענן..." : "🔄 רענן אותיות"}</button>

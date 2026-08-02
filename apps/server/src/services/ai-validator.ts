@@ -3,35 +3,31 @@ import type { AIValidationResult, CategoryDefinition, GameMode } from "@categori
 // ─── Constants ────────────────────────────────────────────────────
 const VALIDATION_TIMEOUT_MS = 20_000;
 
-const SYSTEM_PROMPT = `You are a strict, knowledgeable judge for the Israeli word game "ארץ עיר" (Countries and Cities), played in Hebrew.
+const SYSTEM_PROMPT = `You are a judge for the Hebrew word game "ארץ עיר" (Categories).
 
-Your task: for each player's submitted answer, decide whether it is a valid response for the stated category.
+TASK: For each submitted answer, decide if it genuinely belongs to its stated category.
 
-You must check exactly TWO things per answer:
+RULES:
+- Check ONLY category membership. Letter/spelling rules are enforced elsewhere — ignore them completely.
+- Be lenient: accept Hebrew spelling variations (כתיב מלא/חסר), nicknames, slang names, and common transliterations of real things.
+- Accept well-known proper nouns, colloquial animal names, historical entities, and recognized slang.
+- Empty or gibberish answers are invalid.
+- When in doubt (60%+ confidence it fits) → mark valid. Err on the side of the player.
 
-1. EXISTENCE — Is this a real, recognized word, name, or entity?
-   - It must actually exist in the real world or in Hebrew vocabulary.
-   - Nonsense strings, random letters, or clearly made-up words → INVALID.
-   - Accepted: common names, proper nouns, slang animal names, historical names.
+CATEGORY REFERENCE (covers most common categories; use common sense for others):
+- ארץ / מדינה: any real sovereign state, territory, or historically recognized nation.
+- עיר / יישוב / כפר: any real city, town, village, or settlement, anywhere in the world.
+- חיה / חי / בעל חיים: any real animal — mammals, birds, fish, insects, reptiles — common Hebrew name or scientific name accepted.
+- צמח / צומח / עץ / פרח: any real plant, tree, shrub, flower, or vegetation.
+- דומם: any inanimate object, material, substance, or physical thing.
+- ילד / שם ילד / שם פרטי זכר: a name used for boys/men in Hebrew or Israeli culture.
+- ילדה / שם ילדה / שם פרטי נקבה: a name used for girls/women in Hebrew or Israeli culture.
+- מקצוע / עבודה: any recognized job, occupation, or profession.
+- צבע: any real color name.
+- פרי / ירק: any real fruit or vegetable.
+- For any other category: strict common sense — does this word or phrase genuinely belong?
 
-2. CATEGORY FIT — Does this answer genuinely belong to the stated category?
-   - "ארץ" / country: a real sovereign country, territory, or historically recognized nation.
-   - "עיר" / city: a real city, town, or settlement anywhere in the world.
-   - "חיה" / animal: any real animal species (common or scientific name, including colloquial Hebrew names).
-   - "שם פרטי" / first name: a name used as a given name by real people.
-   - "מקצוע" / profession: a recognized occupation or job title.
-   - "צבע" / color: a real color name.
-   - "פרי" / fruit: a real fruit.
-   - For any other category: apply strict common sense — does this word genuinely belong?
-
-Important rules:
-- DO NOT check letter rule compliance (handled separately) — only judge existence and category fit.
-- Be lenient with Hebrew spelling variations (ktiv male vs. haser, niqqud omission) of valid real things.
-- An empty string is always INVALID (isCategoryFit: false, confidence: 1.0).
-- When genuinely uncertain, set confidence below 0.7 but still provide your best judgment.
-- Provide a short Hebrew reason (1 sentence) for each decision.
-
-Return only valid JSON matching the provided schema.`.trim();
+OUTPUT: valid JSON per schema. Reason must be a single short sentence in Hebrew.`.trim();
 
 // ─── Types ────────────────────────────────────────────────────────
 export interface SubmissionEntry {
@@ -128,21 +124,18 @@ export class AIValidatorService {
     categories: CategoryDefinition[];
     submissions: SubmissionEntry[];
   }) {
-    const ruleNote =
-      input.mode === "classic"
-        ? `The round letter is "${input.letter}". Answers should start with it, but DO NOT check this — only check existence and category fit.`
-        : `The round letters are "${input.letter}". Answers should contain both, but DO NOT check this — only check existence and category fit.`;
+    // Map category id → Hebrew label (sent once, not per player/answer)
+    const categoryLabels = Object.fromEntries(input.categories.map((c) => [c.id, c.label]));
 
     return {
-      note: ruleNote,
-      categories: input.categories.map((c) => ({ id: c.id, label: c.label })),
+      categories: categoryLabels,
       players: input.submissions.map((sub) => ({
         playerId: sub.playerId,
+        // Only include non-empty answers; empty ones are auto-invalid in scoring
         answers: Object.fromEntries(
-          input.categories.map((cat) => [
-            cat.id,
-            { category: cat.label, answer: sub.answers[cat.id] ?? "" },
-          ]),
+          input.categories
+            .map((cat) => [cat.id, (sub.answers[cat.id] ?? "").trim()] as [string, string])
+            .filter(([, answer]) => answer.length > 0),
         ),
       })),
     };

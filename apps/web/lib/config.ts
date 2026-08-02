@@ -9,11 +9,17 @@ declare global {
   }
 }
 
-const PROD_SERVER_URL = "https://server-production-cb9a.up.railway.app";
+const PROD_SERVER_URL = "https://server-production-9aa9.up.railway.app";
+
+// `next dev` talks to the local server, `next build` (Railway) keeps using
+// production — no env var needed. Set NEXT_PUBLIC_SERVER_URL to override either.
+const SERVER_URL =
+  process.env.NEXT_PUBLIC_SERVER_URL ||
+  (process.env.NODE_ENV === "development" ? "http://localhost:4000" : PROD_SERVER_URL);
 
 const fallbackConfig: ClientConfig = {
-  apiUrl: PROD_SERVER_URL,
-  socketUrl: PROD_SERVER_URL
+  apiUrl: SERVER_URL,
+  socketUrl: SERVER_URL
 };
 
 export function getClientConfig(): ClientConfig {
