@@ -15,7 +15,14 @@ import type {
   FamilySnapshot,
 } from "@categories-game/shared";
 import type { FamilyQuestionSource, FamilySetup } from "@categories-game/shared";
-import { CONFIG, ROUND_ORDER, MOST_LIKELY, SURVEY_QUESTIONS, NUMBER_QUESTIONS } from "../games/whoInFamily/content.js";
+import {
+  CONFIG,
+  ROUND_ORDER,
+  MOST_LIKELY,
+  MOST_LIKELY_OPENERS,
+  SURVEY_QUESTIONS,
+  NUMBER_QUESTIONS,
+} from "../games/whoInFamily/content.js";
 import {
   generateSurveyQuestions,
   generateRoundQuestions,
@@ -159,6 +166,13 @@ function buildRoundTypes(count: number): FamilyRoundType[] {
   }
 
   return types;
+}
+
+/** Round A items are stored as bare infinitives; the opener is added here. */
+function composeMostLikely(fragment: string): string {
+  const openers = MOST_LIKELY_OPENERS.length > 0 ? MOST_LIKELY_OPENERS : ["מי הכי סביר"];
+  const opener = openers[Math.floor(Math.random() * openers.length)];
+  return `${opener} ${fragment.trim().replace(/[?]s*$/, "")}?`;
 }
 
 /** Draw `count` items, reshuffling and reusing the pool if it runs out. */
@@ -632,7 +646,10 @@ export class FamilyService {
         continue;
       }
 
-      rounds.push({ type: "A", prompt: statements[statementIdx++ % statements.length] });
+      // Compose the whole line here, varying the opening so fifteen rounds do
+      // not all begin with the same three words.
+      const fragment = statements[statementIdx++ % statements.length];
+      rounds.push({ type: "A", prompt: composeMostLikely(fragment) });
     }
 
     room.rounds = rounds;

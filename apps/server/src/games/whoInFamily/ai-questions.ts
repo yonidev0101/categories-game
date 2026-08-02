@@ -340,8 +340,19 @@ through, and never use שלו / שלה / אותו / אותה about the person be
 LENGTH: 4 to 9 words. It must be readable at a glance, on a phone, by a
 70-year-old.
 
-CONTENT: an observable behaviour that produces instant recognition around the
-table. If you cannot picture the moment, delete it.
+CONTENT: an ordinary thing people actually do in a home or at a family table,
+that produces instant recognition. Before you keep an item, ask: "have I seen
+this happen in a real family, this year?" If not, delete it.
+
+Never invent a scenario that does not exist in family life. The verb must be
+plain and everyday — talking, eating, forgetting, arriving, tidying, singing,
+looking for something, falling asleep. Do not reach for an unusual verb to
+sound clever; unusual verbs are where nonsense comes from.
+  BAD: "להתראיין על הרגלים מוזרים בסעודת שבת"
+       (nobody is interviewed at a Shabbos meal — this scene does not exist)
+  GOOD: "לדבר הכי הרבה בסעודת שבת"
+  BAD: "להרצות על חשיבות הסדר בבית"     (nobody lectures; they nag)
+  GOOD: "להעיר לכולם על הבלגן בסלון"
   BAD: "מי הכי נחמד"                   (abstract, not a scene)
   BAD: "לזכות בפרס נובל"               (fits nobody)
   BAD: "להיות הכי עצלן"                (an insult, not a scene)
@@ -547,8 +558,13 @@ function clean(items: unknown, max: number): string[] {
 const tokens = (text: string) => text.trim().split(/\s+/).filter(Boolean);
 const wordCount = (text: string) => tokens(text).length;
 
-/** Words that almost always mean two ideas were stapled together. */
-const JOINERS = new Set(["וגם", "למרות", "אבל", "אלא", "ואילו", "בעוד", "אף"]);
+/**
+ * Words that almost always mean two ideas were stapled together. Note this is
+ * about CONTRAST, not sequence: "להתחייב לעזור ואז להיעלם" is one scene told in
+ * two beats and reads fine, while "לאחר לתפילה ובכל זאת להגיע ראשון" is two
+ * separate claims and stops being readable at a glance.
+ */
+const JOINERS = new Set(["וגם", "למרות", "אבל", "אלא", "ואילו", "בעוד", "אף", "ובכל", "למרות זאת"]);
 
 const SLANG_WORDS = new Set([
   "הזוי", "הזויה", "זיצים", "בקטע", "וואלה", "אחלה", "סבבה", "פגז", "אש", "חבל",

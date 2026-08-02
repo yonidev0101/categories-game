@@ -20,7 +20,7 @@ import type { FamilySnapshot, FamilyPlayerInfo, FamilyRoundType } from "@categor
 // is real instead of ticking at people the whole round.
 
 const ROUND_LABEL: Record<FamilyRoundType, string> = {
-  A: "מי הכי סביר",
+  A: "על מי מדובר",
   B: "הפתק",
   C: "המספר",
 };
@@ -31,15 +31,6 @@ const PLAYER_COLORS = ["#FF5A3C", "#2F7DE1", "#22A06B", "#E8A317", "#9B51E0", "#
 function colorFor(players: FamilyPlayerInfo[], id: string) {
   const i = players.findIndex((p) => p.id === id);
   return PLAYER_COLORS[(i < 0 ? 0 : i) % PLAYER_COLORS.length];
-}
-
-/**
- * Round A items are stored as infinitive fragments ("להירדם על הספה") so they
- * carry no gender. The screen supplies the opening and the question mark.
- */
-function mostLikelyLine(fragment: string | null) {
-  if (!fragment) return "";
-  return `מי הכי סביר ${fragment.trim().replace(/[?？]\s*$/, "")}?`;
 }
 
 function initials(nickname: string) {
@@ -889,7 +880,7 @@ export function FamilyClient({ roomCode }: Props) {
       return shell(
         <>
           <Note fraction={fraction} secondsLeft={secondsLeft}>
-            <h1 className="fm-question">{mostLikelyLine(question.prompt)}</h1>
+            <h1 className="fm-question">{question.prompt}</h1>
             <p className="fm-do">בחרו מי במשפחה · 100 נקודות למי שבוחר/ת כמו הרוב</p>
           </Note>
           <div className="fm-choices">
@@ -1029,7 +1020,7 @@ export function FamilyClient({ roomCode }: Props) {
             </>
           ) : (
             <h1 className="fm-recap">
-              {reveal.type === "A" ? mostLikelyLine(reveal.prompt) : reveal.prompt}
+              {reveal.prompt}
             </h1>
           )}
           {finished && <p className="fm-verdict">{reveal.summary}</p>}
