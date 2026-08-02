@@ -694,7 +694,7 @@ export function FamilyClient({ roomCode }: Props) {
           <button type="button" className="fm-code" onClick={copyCode}>
             {room.code}
           </button>
-          <p className="fm-hint">{copied ? "הקוד הועתק" : "הקישו כדי להעתיק, ושלחו למשפחה"}</p>
+          <p className="fm-hint">{copied ? "הקוד הועתק" : isCouple ? "הקישו כדי להעתיק, ושלחו לבן/בת הזוג" : "הקישו כדי להעתיק, ושלחו למשפחה"}</p>
         </Note>
 
         {isHost && setup.aiAvailable && (
@@ -716,7 +716,7 @@ export function FamilyClient({ roomCode }: Props) {
                 onClick={() => pickSource("ai")}
                 aria-pressed={usingAi}
               >
-                <span className="fm-source-name">מותאם למשפחה</span>
+                <span className="fm-source-name">{isCouple ? "מותאם לכם" : "מותאם למשפחה"}</span>
                 <span className="fm-source-desc">שאלות שנכתבות עליכם</span>
               </button>
             </div>
@@ -732,11 +732,12 @@ export function FamilyClient({ roomCode }: Props) {
             sharper questions, and the teenagers know things grandma does not. */}
         {usingAi && (
           <section className="fm-block">
-            <h2 className="fm-block-title">ספרו על המשפחה</h2>
+            <h2 className="fm-block-title">{isCouple ? "ספרו על עצמכם" : "ספרו על המשפחה"}</h2>
             <div className="fm-family-box">
               <p className="fm-family-help">
-                כתבו מה שבא לכם על המשפחה — מי תמיד מאחר, מי לא מרים טלפון, בדיחות פנימיות, ריבים קבועים.
-                כל אחד כותב בנפרד, ומכל מה שתכתבו ייכתבו השאלות של המשחק.
+                {isCouple
+                  ? "כתבו על עצמכם ועל הקשר — מי מתכנן ומי מאלתר, מי מוותר ראשון, כמה זמן אתם יחד, הרגלים שמצחיקים אתכם. כל אחד כותב בנפרד."
+                  : "כתבו מה שבא לכם על המשפחה — מי תמיד מאחר, מי לא מרים טלפון, בדיחות פנימיות, ריבים קבועים. כל אחד כותב בנפרד, ומכל מה שתכתבו ייכתבו השאלות של המשחק."}
               </p>
               <textarea
                 id="fm-family"
@@ -746,7 +747,7 @@ export function FamilyClient({ roomCode }: Props) {
                 onBlur={saveNote}
                 rows={4}
                 placeholder="סבתא תמיד מאחרת ומביאה יותר מדי אוכל, אבא מתווכח על הכל, אח שלי לא מרים ראש מהטלפון…"
-                aria-label="מה שאתם רוצים לספר על המשפחה"
+                aria-label={isCouple ? "מה שאתם רוצים לספר על עצמכם" : "מה שאתם רוצים לספר על המשפחה"}
               />
               <div className="fm-family-foot">
                 <span className="fm-count">{familyDraft.length}/{room.config.noteMaxChars}</span>
@@ -808,7 +809,7 @@ export function FamilyClient({ roomCode }: Props) {
         )}
 
         <section className="fm-block">
-          <h2 className="fm-block-title">בחדר · {room.players.length}</h2>
+          <h2 className="fm-block-title">{isCouple ? "מי כאן" : "בחדר"} · {room.players.length}</h2>
           <ul className="fm-people">
             {room.players.map((p) => (
               <li key={p.id} className="fm-people-row">
@@ -820,12 +821,20 @@ export function FamilyClient({ roomCode }: Props) {
               </li>
             ))}
           </ul>
-          <p className="fm-note-line">
-            משחקים שניים מטלפון אחד? בחרו &ldquo;שני אנשים על מכשיר אחד&rdquo; במסך ההצטרפות ותופיעו כשחקן אחד.
-          </p>
-          <p className="fm-note-line">
-            🔊 המוזיקה נשמעת הכי טוב מטלפון אחד. השאירו אותה דלוקה אצל מי שקרוב לרמקול, והשאר יכולים לכבות למעלה.
-          </p>
+          {isCouple ? (
+            <p className="fm-note-line">
+              המשחק הזה לשניים בלבד. כל אחד מהטלפון שלו — חצי מהכיף הוא שלא רואים מה השני בוחר.
+            </p>
+          ) : (
+            <>
+              <p className="fm-note-line">
+                משחקים שניים מטלפון אחד? בחרו &ldquo;שני אנשים על מכשיר אחד&rdquo; במסך ההצטרפות ותופיעו כשחקן אחד.
+              </p>
+              <p className="fm-note-line">
+                🔊 המוזיקה נשמעת הכי טוב מטלפון אחד. השאירו אותה דלוקה אצל מי שקרוב לרמקול, והשאר יכולים לכבות למעלה.
+              </p>
+            </>
+          )}
         </section>
       </>,
       rail(gameTitle),
@@ -987,7 +996,7 @@ export function FamilyClient({ roomCode }: Props) {
         <>
           <Note fraction={fraction} secondsLeft={secondsLeft}>
             <h1 className="fm-question">{question.prompt}</h1>
-            <p className="fm-do">בחרו מי במשפחה · 100 נקודות למי שבוחר/ת כמו הרוב</p>
+            <p className="fm-do">{isCouple ? "בחרו מי משניכם · 100 לשניכם אם הסכמתם" : "בחרו מי במשפחה · 100 נקודות למי שבוחר/ת כמו הרוב"}</p>
           </Note>
           <div className="fm-choices">
             {votable.map((p) => (
@@ -1186,9 +1195,21 @@ export function FamilyClient({ roomCode }: Props) {
 
     return shell(
       <>
+        {isCouple && room.final.knowledgePercent !== null && (
+          <Note tone="quiet">
+            <p className="fm-kicker">כמה אתם מכירים אחד את השני</p>
+            <p className="fm-know">{room.final.knowledgePercent}%</p>
+            <p className="fm-body">
+              {room.final.knowledgePercent >= 80 ? "מרשים. אתם באמת מקשיבים." :
+               room.final.knowledgePercent >= 50 ? "לא רע בכלל. יש עוד מה לגלות." :
+               "יש לכם על מה לדבר הערב."}
+            </p>
+          </Note>
+        )}
+
         {first && (
           <Note tone="quiet">
-            <p className="fm-kicker">המנצח</p>
+            <p className="fm-kicker">{isCouple ? "מוביל/ה" : "המנצח"}</p>
             <div className="fm-winner">
               <Avatar players={room.players} id={first.id} nickname={first.nickname} size={72} />
               <h1 className="fm-headline">{first.nickname}</h1>
@@ -1662,6 +1683,11 @@ function Styles() {
 
       /* ── Winner ───────────────────────────────────────────────────────── */
       .fm-winner { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+      .fm-know {
+        margin: 0; font-size: 64px; font-weight: 900; line-height: 1;
+        letter-spacing: -0.04em; color: var(--persimmon);
+        font-variant-numeric: tabular-nums;
+      }
       .fm-winner-score {
         margin: 0; font-size: 52px; font-weight: 900; line-height: 1;
         color: var(--gold); font-variant-numeric: tabular-nums; letter-spacing: -0.03em;

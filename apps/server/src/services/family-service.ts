@@ -63,6 +63,9 @@ interface StoredFamilyPlayer {
   authorTotalGuesses: number;
   /** of those, how many were correct */
   authorCorrectGuesses: number;
+  // ── couple game ──
+  predictionsMade: number;
+  predictionsRight: number;
 }
 
 interface PlannedRound {
@@ -558,6 +561,8 @@ export class FamilyService {
       p.authorAppearances = 0;
       p.authorTotalGuesses = 0;
       p.authorCorrectGuesses = 0;
+      p.predictionsMade = 0;
+      p.predictionsRight = 0;
     }
 
     this.emit(room.code);
@@ -1082,6 +1087,14 @@ export class FamilyService {
       const partnerGuess = partner ? room.predictions[partner.id] : undefined;
       const correct = theirChoice !== undefined && partnerGuess === theirChoice;
 
+      if (partner && room.predictions[partner.id] !== undefined) {
+        const scorer0 = room.players.find((x) => x.id === partner.id);
+        if (scorer0) {
+          scorer0.predictionsMade += 1;
+          if (correct) scorer0.predictionsRight += 1;
+        }
+      }
+
       if (correct && partner) {
         points.set(partner.id, (points.get(partner.id) ?? 0) + CONFIG.POINTS_D_CORRECT);
         reasons.set(partner.id, `ידעת מה ${p.nickname} יענה`);
@@ -1191,6 +1204,15 @@ export class FamilyService {
       .sort((a, b) => b.points - a.points);
   }
 
+  /** Couple game: the single number the whole evening was really about. */
+  private knowledgePercent(room: StoredFamilyRoom): number | null {
+    if (room.mode !== "couple") return null;
+    const made = room.players.reduce((sum, p) => sum + p.predictionsMade, 0);
+    if (made === 0) return null;
+    const right = room.players.reduce((sum, p) => sum + p.predictionsRight, 0);
+    return Math.round((right / made) * 100);
+  }
+
   private computeTitles(room: StoredFamilyRoom): FamilyTitle[] {
     const titles: FamilyTitle[] = [];
     const add = (key: string, label: string, player: StoredFamilyPlayer | undefined, detail: string) => {
@@ -1297,6 +1319,7 @@ export class FamilyService {
                 )
                 .sort((a, b) => b.score - a.score),
               titles: room.titles,
+              knowledgePercent: this.knowledgePercent(room),
             }
           : null,
       setup: {
@@ -1501,6 +1524,8 @@ export class FamilyService {
       authorAppearances: 0,
       authorTotalGuesses: 0,
       authorCorrectGuesses: 0,
+      predictionsMade: 0,
+      predictionsRight: 0,
     };
   }
 

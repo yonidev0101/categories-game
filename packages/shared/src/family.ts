@@ -171,6 +171,8 @@ export interface FamilyFinalView {
   /** full scoreboard, highest first */
   standings: FamilyPlayerInfo[];
   titles: FamilyTitle[];
+  /** couple game only — how often each predicted the other correctly */
+  knowledgePercent: number | null;
 }
 
 // ─── Room ─────────────────────────────────────────────────────────────────────
