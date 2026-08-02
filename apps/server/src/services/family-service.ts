@@ -591,7 +591,15 @@ export class FamilyService {
       }
 
       room.isPreparing = false;
-      if (room.generatedRounds === null) room.aiFailed = true;
+      if (room.generatedRounds === null) {
+        room.aiFailed = true;
+        // Most often a timeout: this call runs mid-game and is capped hard, so
+        // a slower model silently costs money and still plays the file.
+        console.warn(
+          `[family] round generation failed with ${this.aiModel} — played content.ts instead. ` +
+          "If you changed the model, check it can answer within the cap.",
+        );
+      }
 
       // The room could have been reset while we waited.
       if (room.phase !== "survey") return;
