@@ -81,8 +81,16 @@ silently ignore that detail — do not work around it, do not soften it, drop it
 const HEBREW = `
 ════════ HEBREW LANGUAGE RULES ════════
   • Write natural, spoken Hebrew — the way an Israeli family actually talks.
-  • Stay gender-neutral. Never write הוא/היא, שלו/שלה, or endings that pick a
-    gender for the person being guessed.
+  • Stay gender-neutral — the same item is read by a grandmother and by an
+    eight-year-old boy. Never write הוא/היא, שלו/שלה, אתה/את, or a present-tense
+    verb, because Hebrew present tense always picks a gender.
+    Use instead, all of which are spelled identically for both genders:
+      – past tense:   "כמה כוסות קפה שתית אתמול" (not "אתה שותה")
+      – future tense: "המאכל שלא אטעם בשום מצב" (not "שאני מסרב לטעום")
+      – infinitive:   "להירדם על הספה"
+      – "יש לך" / "אצלך" / "שלי" / a plain noun phrase with no verb at all
+    Check every single item for this before returning it. A gendered item is
+    simply wrong for half the family.
   • No English words, no transliteration, no emoji.
   • One line each. Never repeat an item or write two that mean the same thing.
   • Short enough to read at a glance, on a phone, by a 70-year-old.
@@ -107,7 +115,7 @@ Real failures to learn from:
 
   BAD:  "מה תמיד נכנס אצלי לרשימת קניות לשבת גם אם לא צריך בכלל"
         (two ideas stapled together, and far too long)
-  GOOD: "המוצר שאני קונה כל שבוע בלי צורך"
+  GOOD: "המוצר שקניתי השבוע בלי צורך"
 
   BAD:  "התפקיד שלי הכי חשוב בערב שישי אצל מיכל"
         (broken word order, and names a person)
@@ -218,7 +226,7 @@ A good item is:
 
 CRITICAL — every question is handed out at random, and you do not know who will
 receive it. So each one must be answerable by EVERY member of the family.
-Address the reader as "אתה" and ask about THEM.
+Ask about the reader themselves, without using "אתה" or "את".
     BAD:  "מתי נתפסת בודק מייל באמצע ארוחה?"   (only one person does this)
     BAD:  "איך זה מרגיש כשמשנים לך את הרשימה?"  (aimed at one person)
     GOOD: "מה הכי מעצבן אותך כשמשנים תוכניות ברגע האחרון?"
@@ -322,6 +330,13 @@ breaks it for half the family.
   BAD:   "מי שנרדם על הספה"            (a full clause, does not complete the opening)
   BAD:   "מי הכי סביר להירדם על הספה"  (do not repeat the opening)
 
+The WHOLE item stays in the infinitive. Do not slip into first person partway
+through, and never use שלו / שלה / אותו / אותה about the person being guessed.
+  BAD:  "לאבד שקית או לשכוח איפה הנחתי אותה"   (drops into first person)
+  BAD:  "להתעקש שהחמין שלו הכי טוב"             (שלו picks a gender)
+  GOOD: "לאבד שקית ולא למצוא אותה אף פעם"
+  GOOD: "להתעקש שהחמין הזה הכי טוב שהיה"
+
 LENGTH: 4 to 9 words. It must be readable at a glance, on a phone, by a
 70-year-old.
 
@@ -364,9 +379,15 @@ of them could plausibly be guilty of.
 
 ════════ "numberQuestions" — מה המספר? ════════
 CRITICAL: this question is shown privately to ONE player, and it asks about
-THAT PLAYER THEMSELVES. Address them directly as "אתה". It must never ask about
-another family member, and never about the family as a group — the person
-reading it is the only one who can answer it.
+THAT PLAYER THEMSELVES. It must never ask about another family member, and never
+about the family as a group — the person reading it is the only one who can
+answer it.
+
+Do NOT write "אתה" or "את" — you do not know who will receive it. Use past tense
+or "יש לך", both of which read correctly for anyone:
+  GOOD: "כמה כוסות קפה שתית היום?"
+  GOOD: "כמה מפתחות יש לך על הצרור?"
+  BAD:  "כמה כוסות קפה אתה שותה ביום?"   (masculine only)
 
 Write a mix of two flavours, roughly half and half:
   • "live"     — the reader can check the answer on their phone right now

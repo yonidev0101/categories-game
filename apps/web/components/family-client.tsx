@@ -157,12 +157,12 @@ function RulesSheet({ onClose }: { onClose: () => void }) {
           <li>
             <span className="fm-rule-head">מי הכי סביר</span>
             מוצג משפט, ובוחרים מי במשפחה הכי מתאים לו.
-            <span className="fm-rule-points">100 נקודות אם בחרתם כמו הרוב</span>
+            <span className="fm-rule-points">100 נקודות למי שבוחר/ת כמו הרוב</span>
           </li>
           <li>
             <span className="fm-rule-head">מי כתב את זה</span>
             מוצג פתק שמישהו כתב, בלי שם. מנחשים מי.
-            <span className="fm-rule-points">100 אם ניחשתם · 25 לכותב על כל אחד שלא זיהה</span>
+            <span className="fm-rule-points">100 למי שניחש/ה · 25 לכותב/ת על כל אחד שלא זיהה</span>
           </li>
           <li>
             <span className="fm-rule-head">מה המספר</span>
@@ -857,7 +857,7 @@ export function FamilyClient({ roomCode }: Props) {
         />
         <div className="fm-write-foot">
           <span className="fm-count">{surveyDraft.length}/{room.config.surveyAnswerMaxChars}</span>
-          <span className="fm-hint">אף אחד לא רואה שזה אתם</span>
+          <span className="fm-hint">אף אחד לא רואה שזה אתה או את</span>
         </div>
         <button type="button" className="fm-action" onClick={saveAndNext} disabled={!surveyDraft.trim()}>
           {surveyIndex + 1 === total ? "סיימתי" : "הפתק הבא"}
@@ -890,7 +890,7 @@ export function FamilyClient({ roomCode }: Props) {
         <>
           <Note fraction={fraction} secondsLeft={secondsLeft}>
             <h1 className="fm-question">{mostLikelyLine(question.prompt)}</h1>
-            <p className="fm-do">בחרו מי במשפחה · 100 נקודות אם בחרתם כמו הרוב</p>
+            <p className="fm-do">בחרו מי במשפחה · 100 נקודות למי שבוחר/ת כמו הרוב</p>
           </Note>
           <div className="fm-choices">
             {votable.map((p) => (
@@ -918,7 +918,7 @@ export function FamilyClient({ roomCode }: Props) {
             <p className="fm-kicker">הפתק הזה שלך</p>
             <p className="fm-asked">{question.prompt}</p>
             <blockquote className="fm-quote">{question.answerText}</blockquote>
-            <p className="fm-body">כולם מנסים לנחש שזה אתם. אל תגלו.</p>
+            <p className="fm-body">כולם מנסים לנחש מי כתב את זה. בלי לגלות!</p>
           </Note>,
           railNode,
           dock,
@@ -927,11 +927,11 @@ export function FamilyClient({ roomCode }: Props) {
       return shell(
         <>
           <Note fraction={fraction} secondsLeft={secondsLeft}>
-            <p className="fm-kicker">נשאלו</p>
+            <p className="fm-kicker">השאלה שנשאלה</p>
             <p className="fm-asked">{question.prompt}</p>
             <blockquote className="fm-quote">{question.answerText}</blockquote>
             <p className="fm-kicker fm-asked-cta">מי כתב את זה?</p>
-            <p className="fm-do">נחשו מי מהמשפחה · 100 נקודות אם צדקתם</p>
+            <p className="fm-do">נחשו מי מהמשפחה · 100 נקודות למי שמנחש/ת נכון</p>
           </Note>
           <div className="fm-choices">
             {votable.map((p) => (
@@ -956,7 +956,7 @@ export function FamilyClient({ roomCode }: Props) {
       if (question.iAmSubject) {
         return shell(
           <Note fraction={fraction} secondsLeft={secondsLeft}>
-            <p className="fm-kicker">רק אתם רואים את זה</p>
+            <p className="fm-kicker">רק אצלך על המסך</p>
             <h1 className="fm-question">{question.prompt}</h1>
             <NumberField
               value={numberDraft}
@@ -973,8 +973,8 @@ export function FamilyClient({ roomCode }: Props) {
       return shell(
         <Note fraction={fraction} secondsLeft={secondsLeft} tone="quiet">
           <p className="fm-kicker">רגע אחד</p>
-          <h1 className="fm-headline">{question.subjectNickname} מקבלים שאלה סודית</h1>
-          <p className="fm-body">עוד רגע תנחשו את המספר שהם כתבו.</p>
+          <h1 className="fm-headline">{question.subjectNickname} מקבל/ת שאלה סודית</h1>
+          <p className="fm-body">עוד רגע תנחשו איזה מספר נכתב שם.</p>
         </Note>,
         railNode,
         dock,
@@ -995,7 +995,7 @@ export function FamilyClient({ roomCode }: Props) {
 
     return shell(
       <Note fraction={fraction} secondsLeft={secondsLeft}>
-        <p className="fm-kicker">{question.subjectNickname} נשאלו</p>
+        <p className="fm-kicker">{question.subjectNickname} נשאל/ה</p>
         <h1 className="fm-question">{question.prompt}</h1>
         <NumberField
           value={numberDraft}
@@ -1060,7 +1060,7 @@ export function FamilyClient({ roomCode }: Props) {
         {finished ? (
           <p className={`fm-score-flash${myPoints > 0 ? " fm-score-win" : ""}`}>
             {myPoints > 0 ? `+${myPoints}` : "0"}
-            <span>{myPoints > 0 ? myReason : "לא קיבלתם נקודות בסבב הזה"}</span>
+            <span>{myPoints > 0 ? myReason : "לא קיבלת נקודות בסבב הזה"}</span>
           </p>
         ) : (
           <p className="fm-dock-wait">חושפים…</p>

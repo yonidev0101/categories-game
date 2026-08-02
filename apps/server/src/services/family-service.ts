@@ -730,7 +730,7 @@ export class FamilyService {
       for (const voters of tally.values()) {
         if (voters.length !== topCount) continue;
         for (const voterId of voters) {
-          award(voterId, CONFIG.POINTS_A_MAJORITY, "הצבעתם עם הרוב");
+          award(voterId, CONFIG.POINTS_A_MAJORITY, "הצבעת עם הרוב");
           const voter = room.players.find((p) => p.id === voterId);
           if (voter) voter.majorityHits += 1;
         }
@@ -738,7 +738,7 @@ export class FamilyService {
     } else {
       const correctVoters = tally.get(round.authorId ?? "") ?? [];
       const totalGuesses = Object.keys(room.votes).length;
-      for (const voterId of correctVoters) award(voterId, CONFIG.POINTS_B_CORRECT, "ניחשתם נכון מי כתב");
+      for (const voterId of correctVoters) award(voterId, CONFIG.POINTS_B_CORRECT, "ניחשת נכון מי כתב");
 
       const author = room.players.find((p) => p.id === round.authorId);
       if (author) {
@@ -747,7 +747,7 @@ export class FamilyService {
         author.authorCorrectGuesses += correctVoters.length;
         const misses = totalGuesses - correctVoters.length;
         if (misses > 0) {
-          award(author.id, misses * CONFIG.POINTS_B_AUTHOR_PER_MISS, `${misses} לא זיהו שזה אתם`);
+          award(author.id, misses * CONFIG.POINTS_B_AUTHOR_PER_MISS, `${misses} לא זיהו שהפתק שלך`);
         }
       }
     }
@@ -796,9 +796,9 @@ export class FamilyService {
     const author = room.players.find((p) => p.id === round.authorId);
     const correct = votes.find((v) => v.isAuthor)?.votes ?? 0;
     if (!author) return "";
-    if (correct === 0) return `${author.nickname} כתבו את זה — ואף אחד לא ניחש.`;
-    if (correct === voters) return `${author.nickname} כתבו את זה — וכולם ידעו.`;
-    return `${author.nickname} כתבו את זה. ${correct} מתוך ${voters} ניחשו נכון.`;
+    if (correct === 0) return `${author.nickname} כתב/ה את זה — ואף אחד לא ניחש.`;
+    if (correct === voters) return `${author.nickname} כתב/ה את זה — וכולם ידעו.`;
+    return `${author.nickname} כתב/ה את זה. ${correct} מתוך ${voters} ניחשו נכון.`;
   }
 
   private scoreNumbers(room: StoredFamilyRoom, round: PlannedRound): FamilyRevealView {
@@ -822,7 +822,7 @@ export class FamilyService {
       let amount = CONFIG.POINTS_C_CLOSEST;
       if (entry.isExact) amount += CONFIG.POINTS_C_EXACT_BONUS;
       points.set(entry.playerId, amount);
-      reasons.set(entry.playerId, entry.isExact ? "פגעתם בול" : "הניחוש הכי קרוב");
+      reasons.set(entry.playerId, entry.isExact ? "פגעת בול" : "הניחוש הכי קרוב");
       const player = room.players.find((p) => p.id === entry.playerId);
       if (player) player.score += amount;
     }
@@ -848,11 +848,11 @@ export class FamilyService {
 
   private summariseNumbers(room: StoredFamilyRoom, round: PlannedRound, entries: FamilyNumberReveal[]): string {
     const subject = room.players.find((p) => p.id === round.subjectId)?.nickname ?? "";
-    if (entries.length === 0) return `${subject} ענו ${room.subjectNumber} — ואף אחד לא ניחש.`;
+    if (entries.length === 0) return `${subject} ענה/תה ${room.subjectNumber} — ואף אחד לא ניחש.`;
     const closest = entries.filter((e) => e.isClosest);
     const exact = closest.filter((e) => e.isExact);
-    if (exact.length > 0) return `${subject} ענו ${room.subjectNumber}. ${exact.map((e) => e.nickname).join(" ו")} פגעו בול.`;
-    return `${subject} ענו ${room.subjectNumber}. הכי קרוב: ${closest.map((e) => e.nickname).join(" ו")}.`;
+    if (exact.length > 0) return `${subject} ענה/תה ${room.subjectNumber}. ${exact.map((e) => e.nickname).join(" ו")} פגעו בול.`;
+    return `${subject} ענה/תה ${room.subjectNumber}. הכי קרוב: ${closest.map((e) => e.nickname).join(" ו")}.`;
   }
 
   private formatPoints(
