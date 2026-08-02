@@ -530,6 +530,131 @@ ${varietyBlock(usedQuestions)}
   return result.mostLikely.length >= 2 ? result : null;
 }
 
+// ─── Couple game ─────────────────────────────────────────────────────────────
+
+export interface GeneratedCouple {
+  choices: Array<{ question: string; options: string[] }>;
+  mostLikely: string[];
+  numbers: string[];
+}
+
+const COUPLE_PROMPT = `
+You write content for a Hebrew game played by ONE MARRIED COUPLE, just the two
+of them, on their two phones. The whole game asks one question: how well do you
+know each other?
+
+You produce three kinds of item.
+
+════════ "choices" — מה ענית? ════════
+A question about oneself, with exactly FOUR options. Each partner picks their
+own answer privately, then each guesses what the other picked.
+
+  • all four options must be genuinely plausible for a real person — if one is
+    obviously right or obviously silly, there is nothing to guess
+  • keep each option to one to four words; they are buttons on a phone
+  • the question is about the reader themselves, in first person
+  GOOD: { "question": "מה הכי מרגיע אותי אחרי יום קשה?",
+          "options": ["שקט מוחלט", "לדבר על זה", "משהו מתוק", "לצאת לנשום אוויר"] }
+  BAD:  options like ["לישון", "לישון קצת", "לנוח", "לנמנם"]  (all the same)
+  BAD:  options like ["שקט", "לרקוד על השולחן", "לישון", "לאכול"]  (one is absurd)
+
+════════ "mostLikely" — מי מאיתנו ════════
+The screen shows "מי מאיתנו הכי סביר" and then your item; both of them vote for
+one of the two of them, and they score only when they agree.
+Write ONLY the completion, in the INFINITIVE, 4 to 9 words, no question mark,
+no names. Same rules as the family game.
+  GOOD: "לוותר ראשון אחרי ויכוח"
+  GOOD: "לשכוח מה סיכמנו אתמול"
+
+════════ "numbers" — מה המספר ════════
+One of them answers privately with a whole number, the other guesses it.
+About the reader themselves, no "אתה" or "את", past tense or "יש לך".
+  GOOD: "כמה שנים אנחנו מכירים?"
+  GOOD: "כמה פעמים בשבוע שטפתי כלים?"
+
+════════ WHAT THIS GAME MAY TALK ABOUT ════════
+Unlike the family game, here you MAY write warmly about the marriage itself:
+how they met, the wedding, what each of them values in the other, small
+kindnesses, habits that drive the other one mad, who apologises first, plans
+and dreams they share, how they divide the house.
+
+But this is a frum couple, and the game is still read out loud in their home:
+nothing about intimacy or physical relationship, not even hinted at, not even
+as a joke. Keep it to affection, partnership and daily life together.
+
+${SAFETY}
+
+${HEBREW}
+`.trim();
+
+const COUPLE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    choices: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          question: { type: "string" },
+          options: { type: "array", items: { type: "string" } },
+        },
+        required: ["question", "options"],
+      },
+    },
+    mostLikely: { type: "array", items: { type: "string" } },
+    numbers: { type: "array", items: { type: "string" } },
+  },
+  required: ["choices", "mostLikely", "numbers"],
+};
+
+export async function generateCoupleRounds(
+  counts: { choices: number; mostLikely: number; numbers: number },
+  description: string,
+  usedQuestions: string[],
+  apiKey: string,
+  model: string,
+  timeoutMs = 60_000,
+): Promise<GeneratedCouple | null> {
+  if (!apiKey) return null;
+
+  const user = `
+Write ${counts.choices + 3} "choices", ${counts.mostLikely + 4} "mostLikely" and
+${counts.numbers + 2} "numbers" for one game.
+
+${familyBlock(description, "The couple wrote nothing about themselves, so write items that fit any frum married couple: the home, the routine, who does what, small habits, and how they spend an evening together.")}
+
+${varietyBlock(usedQuestions)}
+`.trim();
+
+  const parsed = await callOpenAi(apiKey, model, COUPLE_PROMPT, user, COUPLE_SCHEMA, "couple_rounds", timeoutMs);
+  if (!parsed) return null;
+
+  const rawChoices = Array.isArray(parsed.choices) ? parsed.choices : [];
+  const choices = rawChoices
+    .filter((c): c is { question: string; options: string[] } =>
+      Boolean(c) && typeof (c as { question?: unknown }).question === "string" &&
+      Array.isArray((c as { options?: unknown }).options))
+    .map((c) => ({
+      question: c.question.trim(),
+      options: c.options.filter((o) => typeof o === "string").map((o) => o.trim()).filter(Boolean).slice(0, 4),
+    }))
+    // four real, distinct options or it is not a guessable round
+    .filter((c) => c.question.length > 5 && c.options.length === 4 && new Set(c.options).size === 4)
+    .slice(0, counts.choices);
+
+  const mostLikely = clean(parsed.mostLikely, counts.mostLikely + 4)
+    .filter((q) => !isTangled(q, 9) && !hasSlang(q))
+    .slice(0, counts.mostLikely);
+
+  const numbers = clean(parsed.numbers, counts.numbers + 2).slice(0, counts.numbers);
+
+  // A thin response is worse than the curated file.
+  if (choices.length < 2 || mostLikely.length < 2) return null;
+  return { choices, mostLikely, numbers };
+}
+
 // ─── Plumbing ────────────────────────────────────────────────────────────────
 
 async function callOpenAi(

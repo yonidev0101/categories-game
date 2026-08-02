@@ -30,7 +30,9 @@ import {
 import {
   generateSurveyQuestions,
   generateRoundQuestions,
+  generateCoupleRounds,
   type GeneratedRounds,
+  type GeneratedCouple,
   type SurveyAnswerMaterial,
 } from "../games/whoInFamily/ai-questions.js";
 
@@ -116,6 +118,8 @@ interface StoredFamilyRoom {
   generatedSurvey: string[] | null;
   /** AI round questions, written after reading everyone's survey answers */
   generatedRounds: GeneratedRounds | null;
+  /** AI content for the couple game */
+  generatedCouple: GeneratedCouple | null;
   /** in-flight background generation, started during the survey */
   roundsJob: Promise<GeneratedRounds | null> | null;
 
@@ -272,7 +276,7 @@ export class FamilyService {
       // default whenever we have a key. content.ts stays as the safety net.
       // The couple game plays from the curated file for now — its rounds have
       // their own shapes and are not wired to the generator yet.
-      source: mode === "couple" ? "file" : this.aiApiKey ? "ai" : "file",
+      source: this.aiApiKey ? "ai" : "file",
       roundCount: mode === "couple" ? CONFIG.COUPLE_DEFAULT_ROUNDS : CONFIG.DEFAULT_ROUNDS,
       roundTypes: [],
       usedQuestions: [],
@@ -280,6 +284,7 @@ export class FamilyService {
       aiFailed: false,
       generatedSurvey: null,
       generatedRounds: null,
+      generatedCouple: null,
       roundsJob: null,
       phaseEndsAt: null,
       timer: null,
@@ -378,6 +383,31 @@ export class FamilyService {
     // The couple game has no "who wrote this" round, so the survey would be
     // three questions whose answers are never used. Straight to the rounds.
     if (room.mode === "couple") {
+      if (room.source === "ai" && this.aiApiKey) {
+        room.isPreparing = true;
+        this.emit(room.code);
+        room.generatedCouple = await generateCoupleRounds(
+          {
+            choices: Math.max(4, room.roundTypes.filter((t) => t === "D").length),
+            mostLikely: Math.max(4, room.roundTypes.filter((t) => t === "A").length),
+            numbers: Math.max(3, room.roundTypes.filter((t) => t === "C").length),
+          },
+          this.composeFamilyDescription(room),
+          room.usedQuestions,
+          this.aiApiKey,
+          this.aiModel,
+        );
+        room.isPreparing = false;
+        room.aiFailed = room.generatedCouple === null;
+        if (room.generatedCouple) {
+          room.usedQuestions.push(
+            ...room.generatedCouple.mostLikely,
+            ...room.generatedCouple.choices.map((c) => c.question),
+          );
+        }
+        if (room.phase !== "lobby") return this.snap(room, playerId);
+      }
+
       this.buildRounds(room);
       room.roundIndex = -1;
       this.nextRound(room);
@@ -517,6 +547,7 @@ export class FamilyService {
     room.aiFailed = false;
     room.generatedSurvey = null;
     room.generatedRounds = null;
+    room.generatedCouple = null;
     room.roundsJob = null;
     for (const p of room.players) {
       p.score = 0;
@@ -810,9 +841,10 @@ export class FamilyService {
 
   /** Two players, so no author to hide and no majority to find. */
   private buildCoupleRounds(room: StoredFamilyRoom, plan: FamilyRoundType[]): PlannedRound[] {
-    const statements = drawCycling(COUPLE_MOST_LIKELY, plan.length);
-    const numbers = drawCycling(COUPLE_NUMBERS, plan.length);
-    const choices = drawCycling(COUPLE_CHOICES, plan.length);
+    const gen = room.generatedCouple;
+    const statements = drawCycling(gen?.mostLikely.length ? gen.mostLikely : COUPLE_MOST_LIKELY, plan.length);
+    const numbers = drawCycling(gen?.numbers.length ? gen.numbers : COUPLE_NUMBERS, plan.length);
+    const choices = drawCycling(gen?.choices.length ? gen.choices : COUPLE_CHOICES, plan.length);
     const subjects = shuffle(room.players.map((p) => p.id));
 
     let s = 0;
@@ -1283,7 +1315,7 @@ export class FamilyService {
       } satisfies FamilySetup,
       config: {
         surveyAnswerMaxChars: CONFIG.SURVEY_ANSWER_MAX_CHARS,
-        minPlayers: CONFIG.MIN_PLAYERS,
+        minPlayers: this.minPlayers(room),
         noteMaxChars: NOTE_MAX,
         minRounds: CONFIG.MIN_ROUNDS,
         maxRounds: CONFIG.MAX_ROUNDS,

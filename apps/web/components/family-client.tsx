@@ -127,43 +127,72 @@ function SoundToggle({ muted, onToggle }: { muted: boolean; onToggle: () => void
 
 const SEEN_RULES_KEY = "categories-game:family-rules-seen";
 
-function RulesSheet({ onClose }: { onClose: () => void }) {
+function RulesSheet({ isCouple, onClose }: { isCouple: boolean; onClose: () => void }) {
   return (
     <div className="fm-sheet" role="dialog" aria-modal="true" aria-label="איך משחקים">
       <div className="fm-sheet-card">
         <h2 className="fm-sheet-title">איך משחקים</h2>
 
-        <ol className="fm-rules">
-          <li>
-            <span className="fm-rule-head">קודם ממלאים פתקים</span>
-            כל אחד עונה על שלוש שאלות על עצמו. אף אחד לא רואה מה כתבתם.
-          </li>
-          <li>
-            <span className="fm-rule-head">אחר כך משחקים סבבים</span>
-            בכל סבב יש שאלה אחת. יש טיימר — מי שלא הספיק, מפסיד את הסבב.
-          </li>
-        </ol>
+        {isCouple ? (
+          <>
+            <p className="fm-sheet-foot">
+              משחק לשניים. בכל סבב שאלה אחת ויש טיימר — מי שלא הספיק, מפסיד את הסבב.
+            </p>
+            <h3 className="fm-sheet-sub">שלושה סוגי סבבים</h3>
+            <ul className="fm-rules fm-rules-plain">
+              <li>
+                <span className="fm-rule-head">מה ענית</span>
+                כל אחד בוחר תשובה על עצמו, ואז מנחש מה השני בחר.
+                <span className="fm-rule-points">100 נקודות על כל ניחוש נכון</span>
+              </li>
+              <li>
+                <span className="fm-rule-head">מי מאיתנו</span>
+                מוצג משפט, ושניכם בוחרים מי משניכם.
+                <span className="fm-rule-points">100 לשניכם — רק אם הסכמתם</span>
+              </li>
+              <li>
+                <span className="fm-rule-head">מה המספר</span>
+                אחד מכם מקבל שאלה סודית ועונה במספר. השני מנחש.
+                <span className="fm-rule-points">100 לניחוש הכי קרוב · 150 על פגיעה מדויקת</span>
+              </li>
+            </ul>
+            <p className="fm-sheet-foot">בסוף — כמה אתם מכירים אחד את השני. בהצלחה.</p>
+          </>
+        ) : (
+          <>
+            <ol className="fm-rules">
+              <li>
+                <span className="fm-rule-head">קודם ממלאים פתקים</span>
+                כל אחד עונה על שלוש שאלות על עצמו. אף אחד לא רואה מה כתבתם.
+              </li>
+              <li>
+                <span className="fm-rule-head">אחר כך משחקים סבבים</span>
+                בכל סבב יש שאלה אחת. יש טיימר — מי שלא הספיק, מפסיד את הסבב.
+              </li>
+            </ol>
 
-        <h3 className="fm-sheet-sub">שלושה סוגי סבבים</h3>
-        <ul className="fm-rules fm-rules-plain">
-          <li>
-            <span className="fm-rule-head">מי הכי סביר</span>
-            מוצג משפט, ובוחרים מי במשפחה הכי מתאים לו.
-            <span className="fm-rule-points">100 נקודות למי שבוחר/ת כמו הרוב</span>
-          </li>
-          <li>
-            <span className="fm-rule-head">מי כתב את זה</span>
-            מוצג פתק שמישהו כתב, בלי שם. מנחשים מי.
-            <span className="fm-rule-points">100 למי שניחש/ה · 25 לכותב/ת על כל אחד שלא זיהה</span>
-          </li>
-          <li>
-            <span className="fm-rule-head">מה המספר</span>
-            שחקן אחד מקבל שאלה סודית ועונה במספר. כולם מנחשים כמה.
-            <span className="fm-rule-points">100 לניחוש הכי קרוב · 150 על פגיעה מדויקת</span>
-          </li>
-        </ul>
+            <h3 className="fm-sheet-sub">שלושה סוגי סבבים</h3>
+            <ul className="fm-rules fm-rules-plain">
+              <li>
+                <span className="fm-rule-head">מי הכי סביר</span>
+                מוצג משפט, ובוחרים מי במשפחה הכי מתאים לו.
+                <span className="fm-rule-points">100 נקודות למי שבוחר/ת כמו הרוב</span>
+              </li>
+              <li>
+                <span className="fm-rule-head">מי כתב את זה</span>
+                מוצג פתק שמישהו כתב, בלי שם. מנחשים מי.
+                <span className="fm-rule-points">100 למי שניחש/ה · 25 לכותב/ת על כל אחד שלא זיהה</span>
+              </li>
+              <li>
+                <span className="fm-rule-head">מה המספר</span>
+                שחקן אחד מקבל שאלה סודית ועונה במספר. כולם מנחשים כמה.
+                <span className="fm-rule-points">100 לניחוש הכי קרוב · 150 על פגיעה מדויקת</span>
+              </li>
+            </ul>
 
-        <p className="fm-sheet-foot">בסוף — טבלה ותארים. בהצלחה.</p>
+            <p className="fm-sheet-foot">בסוף — טבלה ותארים. בהצלחה.</p>
+          </>
+        )}
 
         <button type="button" className="fm-action" onClick={onClose}>הבנתי</button>
       </div>
@@ -434,6 +463,8 @@ export function FamilyClient({ roomCode }: Props) {
   const me = snapshot?.me;
   const myId = me?.playerId ?? null;
   const isHost = room?.hostPlayerId === myId;
+  const isCouple = room?.setup.mode === "couple";
+  const gameTitle = isCouple ? "מי מאיתנו?" : "מי מהמשפחה?";
   const { secondsLeft, fraction } = usePhaseTimer(room?.phaseEndsAt ?? null);
   const { muted, toggle: toggleSound, setMode, setUrgency, sfx } = useSoundtrack();
 
@@ -610,7 +641,7 @@ export function FamilyClient({ roomCode }: Props) {
     <div className="fm-app">
       <Styles />
       <Toast message={message} />
-      {showRules && <RulesSheet onClose={() => setShowRules(false)} />}
+      {showRules && <RulesSheet isCouple={isCouple} onClose={() => setShowRules(false)} />}
       <div className="fm-frame">
         {rail}
         {showStandings && room.phase !== "lobby" && <Standings players={room.players} myId={myId} />}
@@ -797,7 +828,7 @@ export function FamilyClient({ roomCode }: Props) {
           </p>
         </section>
       </>,
-      rail("מי מהמשפחה?"),
+      rail(gameTitle),
       <footer className="fm-dock">
         {isHost ? (
           <button
