@@ -881,6 +881,10 @@ export class FamilyService {
     room.roundIndex += 1;
     room.votes = {};
     room.numbers = {};
+    // Without these two the next round opens with last round's pick already
+    // highlighted, which reads as "the answer is chosen for me".
+    room.choices = {};
+    room.predictions = {};
     room.subjectNumber = null;
     room.reveal = null;
     room.stage = null;

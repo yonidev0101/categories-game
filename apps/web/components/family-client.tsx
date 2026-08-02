@@ -272,13 +272,27 @@ function Roster({
 
 /** My score and my place, always visible — the question everyone keeps asking. */
 function ScoreTag({
-  players, myId, open, onToggle,
+  players, myId, isCouple, open, onToggle,
 }: {
   players: FamilyPlayerInfo[];
   myId: string | null;
+  isCouple: boolean;
   open: boolean;
   onToggle: () => void;
 }) {
+  // A couple is not competing with each other. Telling one of them they are
+  // "2nd of 2" turns a game about knowing your partner into a game about
+  // beating them, which is the opposite of the point.
+  if (isCouple) {
+    const together = players.reduce((sum, p) => sum + p.score, 0);
+    return (
+      <button type="button" className="fm-scoretag" onClick={onToggle} aria-expanded={open}>
+        <span className="fm-scoretag-num">{together}</span>
+        <span className="fm-scoretag-place">ביחד</span>
+      </button>
+    );
+  }
+
   const ranked = [...players].sort((a, b) => b.score - a.score);
   const me = ranked.find((p) => p.id === myId);
   if (!me) return null;
@@ -305,7 +319,31 @@ function SkipButton({ onSkip, label = "דלגו על השאלה" }: { onSkip: ()
   );
 }
 
-function Standings({ players, myId }: { players: FamilyPlayerInfo[]; myId: string | null }) {
+function Standings({
+  players, myId, isCouple,
+}: {
+  players: FamilyPlayerInfo[];
+  myId: string | null;
+  isCouple: boolean;
+}) {
+  if (isCouple) {
+    const together = players.reduce((sum, p) => sum + p.score, 0);
+    return (
+      <ul className="fm-standings">
+        <li className="fm-standing fm-standing-me">
+          <span className="fm-person-name">ביחד</span>
+          <span className="fm-result-value">{together}</span>
+        </li>
+        {players.map((p) => (
+          <li key={p.id} className="fm-standing fm-standing-quiet">
+            <span className="fm-person-name">{p.nickname}</span>
+            <span className="fm-result-value">{p.score}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   const ranked = [...players].sort((a, b) => b.score - a.score);
   return (
     <ul className="fm-standings">
@@ -644,7 +682,7 @@ export function FamilyClient({ roomCode }: Props) {
       {showRules && <RulesSheet isCouple={isCouple} onClose={() => setShowRules(false)} />}
       <div className="fm-frame">
         {rail}
-        {showStandings && room.phase !== "lobby" && <Standings players={room.players} myId={myId} />}
+        {showStandings && room.phase !== "lobby" && <Standings players={room.players} myId={myId} isCouple={isCouple} />}
         <main className="fm-main">{children}</main>
         {dock}
       </div>
@@ -660,6 +698,7 @@ export function FamilyClient({ roomCode }: Props) {
           <ScoreTag
             players={room.players}
             myId={myId}
+            isCouple={isCouple}
             open={showStandings}
             onToggle={() => setShowStandings((v) => !v)}
           />
@@ -1207,15 +1246,37 @@ export function FamilyClient({ roomCode }: Props) {
           </Note>
         )}
 
-        {first && (
-          <Note tone="quiet">
-            <p className="fm-kicker">{isCouple ? "מוביל/ה" : "המנצח"}</p>
-            <div className="fm-winner">
-              <Avatar players={room.players} id={first.id} nickname={first.nickname} size={72} />
-              <h1 className="fm-headline">{first.nickname}</h1>
-              <p className="fm-winner-score">{first.score}</p>
-            </div>
-          </Note>
+        {/* No podium for two people who live together. */}
+        {isCouple ? (
+          <section className="fm-block">
+            <h2 className="fm-block-title">ביחד צברתם</h2>
+            <ul className="fm-people">
+              <li className="fm-people-row fm-people-me">
+                <span className="fm-person-name">שניכם</span>
+                <span className="fm-result-value">
+                  {room.final.standings.reduce((sum, p) => sum + p.score, 0)}
+                </span>
+              </li>
+              {room.final.standings.map((p) => (
+                <li key={p.id} className="fm-people-row fm-standing-quiet">
+                  <Avatar players={room.players} id={p.id} nickname={p.nickname} size={34} />
+                  <span className="fm-person-name">{p.nickname}</span>
+                  <span className="fm-result-value">{p.score}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : (
+          first && (
+            <Note tone="quiet">
+              <p className="fm-kicker">המנצח</p>
+              <div className="fm-winner">
+                <Avatar players={room.players} id={first.id} nickname={first.nickname} size={72} />
+                <h1 className="fm-headline">{first.nickname}</h1>
+                <p className="fm-winner-score">{first.score}</p>
+              </div>
+            </Note>
+          )
         )}
 
         {room.final.titles.length > 0 && (
@@ -1233,7 +1294,7 @@ export function FamilyClient({ roomCode }: Props) {
           </section>
         )}
 
-        <section className="fm-block">
+        <section className="fm-block" hidden={isCouple}>
           <h2 className="fm-block-title">הטבלה</h2>
           <ul className="fm-people">
             {rest.map((p, i) => (
@@ -1355,6 +1416,7 @@ function Styles() {
         font-size: 18px; font-weight: 700;
       }
       .fm-standing-me { background: rgba(255,90,60,0.2); }
+      .fm-standing-quiet { opacity: 0.65; font-size: 16px; }
 
       /* ── How to play ──────────────────────────────────────────────────── */
       .fm-sheet {
