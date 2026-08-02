@@ -104,6 +104,8 @@ interface StoredFamilyRoom {
   generatedSurvey: string[] | null;
   /** AI round questions, written after reading everyone's survey answers */
   generatedRounds: GeneratedRounds | null;
+  /** in-flight background generation, started during the survey */
+  roundsJob: Promise<GeneratedRounds | null> | null;
 
   phaseEndsAt: string | null;
   timer: ReturnType<typeof setTimeout> | null;
@@ -172,7 +174,7 @@ function buildRoundTypes(count: number): FamilyRoundType[] {
 function composeMostLikely(fragment: string): string {
   const openers = MOST_LIKELY_OPENERS.length > 0 ? MOST_LIKELY_OPENERS : ["מי הכי סביר"];
   const opener = openers[Math.floor(Math.random() * openers.length)];
-  return `${opener} ${fragment.trim().replace(/[?]s*$/, "")}?`;
+  return `${opener} ${fragment.trim().replace(/\?\s*$/, "")}?`;
 }
 
 /** Draw `count` items, reshuffling and reusing the pool if it runs out. */
@@ -196,6 +198,8 @@ export class FamilyService {
     private readonly events: FamilyEvents = {},
     private readonly aiApiKey: string = "",
     private readonly aiModel: string = "gpt-4.1-mini",
+    /** the lobby call has the host watching, so it may use a faster model */
+    private readonly surveyModel: string = aiModel,
   ) {}
 
   // ── Room lifecycle ──────────────────────────────────────────────────────────
@@ -226,6 +230,7 @@ export class FamilyService {
       aiFailed: false,
       generatedSurvey: null,
       generatedRounds: null,
+      roundsJob: null,
       phaseEndsAt: null,
       timer: null,
       createdAt: new Date().toISOString(),
@@ -319,7 +324,7 @@ export class FamilyService {
         this.composeFamilyDescription(room),
         room.usedQuestions,
         this.aiApiKey,
-        this.aiModel,
+        this.surveyModel,
       );
       if (room.generatedSurvey) room.usedQuestions.push(...room.generatedSurvey);
       room.aiFailed = room.generatedSurvey === null;
@@ -438,6 +443,7 @@ export class FamilyService {
     room.aiFailed = false;
     room.generatedSurvey = null;
     room.generatedRounds = null;
+    room.roundsJob = null;
     for (const p of room.players) {
       p.score = 0;
       p.surveyQuestions = [];
@@ -464,6 +470,9 @@ export class FamilyService {
 
     player.surveyAnswers[index] = text.trim().slice(0, CONFIG.SURVEY_ANSWER_MAX_CHARS);
     this.emit(room.code);
+
+    // Give the model a head start while the slower typists are still going.
+    if (this.hasEnoughMaterial(room)) this.startRoundsJob(room);
 
     if (room.players.every((p) => this.hasFinishedSurvey(p))) {
       this.hurryUp(room, () => this.endSurvey(room));
@@ -556,6 +565,48 @@ export class FamilyService {
    * the rounds. Capped hard — a round is about to start, so we would rather
    * play with the curated file than keep the room staring at a screen.
    */
+  /**
+   * Start writing the rounds while the survey is still running.
+   *
+   * Waiting for the survey to end and only then calling the model meant the
+   * whole family sat watching a spinner, which is why the call was capped at
+   * ten seconds — and a capped call is one that quietly falls back to the file.
+   * Kicking it off as soon as there is enough material gives the model the rest
+   * of the survey to think in, and the result is usually ready before anyone
+   * finishes typing.
+   */
+  private startRoundsJob(room: StoredFamilyRoom) {
+    if (room.roundsJob || room.source !== "ai" || !this.aiApiKey) return;
+
+    const material: SurveyAnswerMaterial[] = room.players.flatMap((p) =>
+      p.surveyQuestions.map((question, i) => ({
+        nickname: p.nickname,
+        question,
+        answer: p.surveyAnswers[i] ?? "",
+      })),
+    );
+
+    room.roundsJob = generateRoundQuestions(
+      {
+        mostLikely: Math.max(6, room.roundTypes.filter((t) => t === "A").length),
+        numbers: Math.max(4, room.roundTypes.filter((t) => t === "C").length),
+      },
+      this.composeFamilyDescription(room),
+      material,
+      room.usedQuestions,
+      this.aiApiKey,
+      this.aiModel,
+      // Generous: this is running in the background, nobody is staring at it.
+      90_000,
+    ).catch(() => null);
+  }
+
+  /** Enough people have written for the model to have something to work with. */
+  private hasEnoughMaterial(room: StoredFamilyRoom): boolean {
+    const finished = room.players.filter((p) => this.hasFinishedSurvey(p)).length;
+    return finished >= Math.max(2, Math.ceil(room.players.length / 2));
+  }
+
   private async finishSurvey(room: StoredFamilyRoom) {
     if (room.source === "ai" && this.aiApiKey) {
       room.isPreparing = true;
@@ -563,25 +614,12 @@ export class FamilyService {
       this.clearTimer(room);
       this.emit(room.code);
 
-      const material: SurveyAnswerMaterial[] = room.players.flatMap((p) =>
-        p.surveyQuestions.map((question, i) => ({
-          nickname: p.nickname,
-          question,
-          answer: p.surveyAnswers[i] ?? "",
-        })),
-      );
+      // Usually already running and often already done; this only starts it if
+      // the survey ended before anyone finished.
+      this.startRoundsJob(room);
+      room.generatedRounds = (await room.roundsJob) ?? null;
+      room.roundsJob = null;
 
-      room.generatedRounds = await generateRoundQuestions(
-        {
-          mostLikely: Math.max(6, room.roundTypes.filter((t) => t === "A").length),
-          numbers: Math.max(4, room.roundTypes.filter((t) => t === "C").length),
-        },
-        this.composeFamilyDescription(room),
-        material,
-        room.usedQuestions,
-        this.aiApiKey,
-        this.aiModel,
-      );
       if (room.generatedRounds) {
         room.usedQuestions.push(...room.generatedRounds.mostLikely, ...room.generatedRounds.numberQuestions);
       }

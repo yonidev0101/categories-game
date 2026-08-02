@@ -290,6 +290,23 @@ function Standings({ players, myId }: { players: FamilyPlayerInfo[]; myId: strin
   );
 }
 
+/**
+ * Round B must NOT list names. The author is not a participant, so a name
+ * roster shows everyone else and the one missing name is the answer — it hands
+ * the round away before anyone guesses. A bare count says the same useful thing
+ * ("are we still waiting?") without naming anyone.
+ */
+function ProgressCount({ done, total }: { done: number; total: number }) {
+  return (
+    <div className="fm-roster">
+      <div className="fm-progress-bar">
+        <div className="fm-progress-fill" style={{ width: `${total > 0 ? (done / total) * 100 : 0}%` }} />
+      </div>
+      <p className="fm-roster-caption">ניחשו {done} מתוך {total}</p>
+    </div>
+  );
+}
+
 function Avatar({ players, id, nickname, size = 44 }: { players: FamilyPlayerInfo[]; id: string; nickname: string; size?: number }) {
   return (
     <span
@@ -865,12 +882,16 @@ export function FamilyClient({ roomCode }: Props) {
     const railNode = rail(ROUND_LABEL[question.type], `${question.roundNumber}/${question.totalRounds}`);
     const dock = (
       <footer className="fm-dock">
-        <Roster
-          players={room.players}
-          participantIds={question.participantIds}
-          answeredIds={question.answeredIds}
-          caption="ענו"
-        />
+        {question.type === "B" ? (
+          <ProgressCount done={question.answeredCount} total={question.expectedCount} />
+        ) : (
+          <Roster
+            players={room.players}
+            participantIds={question.participantIds}
+            answeredIds={question.answeredIds}
+            caption="ענו"
+          />
+        )}
         {isHost && <SkipButton onSkip={() => emit("f_skip_round")} />}
       </footer>
     );

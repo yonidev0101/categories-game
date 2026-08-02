@@ -357,12 +357,50 @@ sound clever; unusual verbs are where nonsense comes from.
   BAD: "לזכות בפרס נובל"               (fits nobody)
   BAD: "להיות הכי עצלן"                (an insult, not a scene)
 
-SPREAD the items roughly evenly across these axes:
+TONE — this is a party game, not a survey. Items should make the room laugh,
+not just nod. Mix these registers across the set instead of writing thirteen
+of the same kind:
+
+  • gentle absurdity — treating an object or a machine like a person. This is
+    the funniest register and the most underused:
+      "להתווכח עם הוויז על הדרך הכי קצרה"
+      "להסביר למכונת הכביסה מה היא עשתה לא בסדר"
+      "לנהל משא ומתן עם התנור"
+  • caught in the act — the small thing everyone does and nobody admits:
+      "לטעום מהסיר ולהגיד שלא נגע"
+      "להיעלם בדיוק כשמתחילים לפנות"
+  • stubborn conviction — absolute certainty about something tiny:
+      "להתעקש שהדרך הזאת קצרה בשתי דקות"
+  • everyday blunders out in the world — driving, parking, errands, queues.
+    Do NOT keep every item inside the house; half of family life happens out:
+      "לנסוע נגד כיוון התנועה בלי לשים לב"
+      "לחפש את החניה שהרכב חונה בה"
+      "לחזור מהמכולת בלי הדבר שבשבילו הלכו"
+  • warm and affectionate — not every item should tease:
+      "להיות הראשון להתלהב ממתנה קטנה"
+
+Aim for roughly a third absurd, a third caught-in-the-act, and the rest split
+between conviction and warmth. An item nobody smiles at is a wasted round.
+Absurd does NOT mean invented: arguing with Waze is funny because it really
+happens. Keep every item inside real family life.
+
+SPREAD the items roughly evenly across these axes. AT MOST half may be set at
+home — the rest must happen out in the world, or the game feels claustrophobic:
+
+  AT HOME
   • the rhythm of שבת and חגים — the meal, the זמירות, the פלטה, the Friday rush
   • Yom Tov preparation — Pesach cleaning, the Seder, building the Sukkah,
     Purim costumes and mishloach manos, Chanukah candles
-  • universal household oddities — lost keys, glasses on the head, leftovers
+  • household oddities — lost keys, glasses on the head, leftovers, the junk drawer
   • the kitchen and hosting guests
+
+  OUT IN THE WORLD
+  • driving and navigation — wrong turns, parking, arguing with the GPS
+  • errands — the makolet, the queue, coming home without the one thing
+  • buses, waiting rooms, appointments, getting lost
+  • family trips — packing, the car, "are we there yet"
+
+  ANYWHERE
   • timing and lateness — davening, the meal, leaving the house
   • generational habits — hoarding plastic bags, calling instead of texting
   • warm traits — first to clear the table, most excited by a small gift

@@ -40,8 +40,16 @@ export const serverConfig = {
   openAiApiKey: process.env.OPENAI_API_KEY ?? "",
   openAiModel: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
   // "מי מהמשפחה?" writes whole Hebrew sentences that get read aloud, so it uses
-  // a stronger model than the other games. Override with FAMILY_OPENAI_MODEL.
-  familyOpenAiModel: process.env.FAMILY_OPENAI_MODEL ?? "gpt-4.1",
+  // its own model. gpt-5.6-luna writes visibly cleaner Hebrew than gpt-4.1 and
+  // costs about a third as much; it is also far slower, which only became
+  // affordable once round generation moved to the background during the survey.
+  // Override with FAMILY_OPENAI_MODEL.
+  familyOpenAiModel: process.env.FAMILY_OPENAI_MODEL ?? "gpt-5.6-luna",
+  // The survey call runs in the lobby with the host watching a spinner, so it
+  // defaults to the fast model. The rounds call runs in the background during
+  // the survey and can afford the slower, better one.
+  familySurveyModel:
+    process.env.FAMILY_SURVEY_MODEL ?? process.env.FAMILY_OPENAI_MODEL ?? "gpt-4.1",
   adminSecret: process.env.ADMIN_SECRET ?? "",
 };
 

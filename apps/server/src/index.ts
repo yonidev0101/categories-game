@@ -100,6 +100,7 @@ const familyService = new FamilyService(
   { onState: emitFamilyState },
   serverConfig.openAiApiKey,
   serverConfig.familyOpenAiModel,
+  serverConfig.familySurveyModel,
 );
 
 const mongo = new MongoPersistence(serverConfig.mongodbUri, serverConfig.mongodbDbName);
@@ -851,7 +852,7 @@ async function bootstrap() {
     console.log(`Server listening on http://localhost:${serverConfig.port}`);
     console.log(
       serverConfig.openAiApiKey
-        ? `OpenAI: on (${serverConfig.familyOpenAiModel} for "מי מהמשפחה?")`
+        ? `OpenAI: on — "מי מהמשפחה?" uses ${serverConfig.familySurveyModel} (lobby) and ${serverConfig.familyOpenAiModel} (rounds)`
         : 'OpenAI: OFF — no OPENAI_API_KEY found, games fall back to their built-in questions',
     );
   });
