@@ -234,11 +234,36 @@ function composeCoupleLine(fragment: string): string {
   return `מי מאיתנו הכי סביר ${fragment.trim().replace(/\?\s*$/, "")}?`;
 }
 
-/** Round A items are stored as bare infinitives; the opener is added here. */
-function composeMostLikely(fragment: string): string {
+/**
+ * Round A items come in two shapes, and both are allowed:
+ *
+ *   • a whole question — "למי יש הכי הרבה נעליים בבית?" — used exactly as
+ *     written. This is what keeps the round from sounding like the same
+ *     sentence fifteen times.
+ *   • a bare infinitive — "להירדם על הספה" — which is only half a sentence, so
+ *     one of the openers is drawn and glued on.
+ *
+ * An item that starts with ל and has no question word is the second kind;
+ * anything else already stands on its own.
+ */
+function composeMostLikely(item: string): string {
+  const text = item.trim().replace(/\?\s*$/, "");
+  if (!isInfinitiveFragment(text)) return `${text}?`;
+
   const openers = MOST_LIKELY_OPENERS.length > 0 ? MOST_LIKELY_OPENERS : ["מי הכי סביר"];
   const opener = openers[Math.floor(Math.random() * openers.length)];
-  return `${opener} ${fragment.trim().replace(/\?\s*$/, "")}?`;
+  return `${opener} ${text}?`;
+}
+
+/**
+ * Hebrew infinitives all begin with ל — but so do several question words
+ * ("למי יש...", "לאן..."), and those open a whole question, not a fragment.
+ */
+const L_QUESTION_WORDS = new Set(["למי", "למה", "לאן", "לאיזה", "לאיזו", "לכמה", "לאיפה"]);
+
+function isInfinitiveFragment(text: string): boolean {
+  const first = text.split(/\s+/)[0] ?? "";
+  return /^ל[א-ת]/.test(first) && !L_QUESTION_WORDS.has(first);
 }
 
 /** Draw `count` items, reshuffling and reusing the pool if it runs out. */

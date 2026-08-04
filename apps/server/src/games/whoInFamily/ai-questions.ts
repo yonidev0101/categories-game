@@ -313,32 +313,60 @@ ${CONTEXT}
 
 You are writing two kinds of round. Read the rules for each carefully.
 
-════════ "mostLikely" — מי הכי סביר ... ════════
-The screen shows the fixed opening "מי הכי סביר" and then your item. Everyone
-votes for the family member it fits best. There is no correct answer — the fun
-is the argument afterwards.
+════════ "mostLikely" — the voting round ════════
 
-FORMAT — this is the single most important rule:
-Write ONLY the completion, in the INFINITIVE (ל+verb). Do not write the opening
-words, do not add a question mark, do not write a full sentence.
-The infinitive carries no gender and no number, so one item fits a grandmother,
-an uncle and an eight-year-old equally. ANY other verb form genders the item and
-breaks it for half the family.
-  GOOD:  "להירדם על הספה אחרי סעודת ליל שבת"
-  BAD:   "נרדם על הספה"                (past tense, masculine only)
-  BAD:   "שיירדם על הספה"              (finite verb, masculine only)
-  BAD:   "מי שנרדם על הספה"            (a full clause, does not complete the opening)
-  BAD:   "מי הכי סביר להירדם על הספה"  (do not repeat the opening)
+THE POINT OF THE ROUND: one question appears on everyone's phone. Each person
+votes for the family member the answer is, and then the whole room argues about
+it. That argument is the entire game. Your only goal is to write a question
+that makes a family point at each other and start talking over one another.
 
-The WHOLE item stays in the infinitive. Do not slip into first person partway
-through, and never use שלו / שלה / אותו / אותה about the person being guessed.
-  BAD:  "לאבד שקית או לשכוח איפה הנחתי אותה"   (drops into first person)
-  BAD:  "להתעקש שהחמין שלו הכי טוב"             (שלו picks a gender)
-  GOOD: "לאבד שקית ולא למצוא אותה אף פעם"
-  GOOD: "להתעקש שהחמין הזה הכי טוב שהיה"
+So write WHOLE QUESTIONS, in whatever form the idea calls for. Every item you
+return is put on the screen exactly as you wrote it, with nothing added. You
+choose the wording each time.
 
-LENGTH: 4 to 9 words. It must be readable at a glance, on a phone, by a
-70-year-old.
+VARIETY OF SHAPE IS THE MOST IMPORTANT RULE HERE.
+The fastest way to ruin this round is to write fifteen questions that all start
+the same way. A family that reads "מי הכי סביר" five times in a row stops
+listening. Rotate the shape constantly — no two questions in a row may open
+with the same word, and no shape may be used more than about twice in the set.
+
+Shapes to move between (this list is a starting point, not a menu — invent
+others in the same spirit):
+  • possession        "למי יש הכי הרבה נעליים בבית?"
+  • plain superlative "מי מדבר הכי הרבה בסעודת שבת?"
+  • the past          "מי איבד את המפתחות בפעם האחרונה?"
+  • the future        "מי יהיה האחרון שיהיה מוכן לצאת?"
+  • likelihood        "מי הכי סביר להירדם באמצע הזמירות?"
+  • a hypothetical    "אם נשארנו תקועים בדרך, מי מתחיל לצחוק ראשון?"
+  • trust             "על מי הכי אפשר לסמוך שיזכור מה חסר בבית?"
+  • reversal          "את מי הכי קשה להעיר בבוקר?"
+  • a role            "מי הכי מתאים להיות אחראי על הקניות לפסח?"
+  • a small scenario  "השולחן מתפנה — מי נעלם בדיוק ברגע הזה?"
+  • rivalry           "מי בטוח שיש דרך קצרה יותר ממה שכולם נוסעים?"
+  • a countable tally "אצל מי הכי הרבה כוסות בחדר עכשיו?"
+
+You may end with a question mark, and you should — these are questions.
+
+LENGTH: up to about 12 words. It must be readable at a glance, on a phone, by a
+70-year-old. Shorter is better; a long question is a question nobody finished.
+
+GENDER — this is the one place where the general Hebrew rule below is relaxed,
+so read it carefully. The answer to these questions may be a grandmother or an
+eight-year-old boy; the question must fit either.
+
+  • "מי" always takes the masculine, and every Hebrew speaker hears that as
+    neutral. So third-person questions are fine in any tense:
+        "מי מדבר הכי הרבה בסעודת שבת?"     (present — fine after מי)
+        "מי איבד את המפתחות אתמול?"          (past — fine)
+        "מי הכי סביר להירדם על הספה?"        (infinitive — fine)
+  • What is NOT fine is a PRONOUN about the person being guessed. Never write
+    הוא / היא / שלו / שלה / אותו / אותה anywhere in the question — a pronoun
+    commits to a gender in a way "מי מדבר" does not.
+        BAD:  "מי הכי סביר שהוא יירדם על הספה?"
+        BAD:  "מי מתעקשת שהחמין שלה הכי טוב?"
+        GOOD: "מי מתעקש שהחמין הזה הכי טוב שהיה?"
+  • Never address the reader — no "אתה", no "את", no "שלך". The question is
+    about the family, not about whoever is holding the phone.
 
 CONTENT: an ordinary thing people actually do in a home or at a family table,
 that produces instant recognition. Before you keep an item, ask: "have I seen
@@ -348,14 +376,14 @@ Never invent a scenario that does not exist in family life. The verb must be
 plain and everyday — talking, eating, forgetting, arriving, tidying, singing,
 looking for something, falling asleep. Do not reach for an unusual verb to
 sound clever; unusual verbs are where nonsense comes from.
-  BAD: "להתראיין על הרגלים מוזרים בסעודת שבת"
+  BAD: "מי הכי סביר להתראיין על הרגלים מוזרים בסעודת שבת?"
        (nobody is interviewed at a Shabbos meal — this scene does not exist)
-  GOOD: "לדבר הכי הרבה בסעודת שבת"
-  BAD: "להרצות על חשיבות הסדר בבית"     (nobody lectures; they nag)
-  GOOD: "להעיר לכולם על הבלגן בסלון"
-  BAD: "מי הכי נחמד"                   (abstract, not a scene)
-  BAD: "לזכות בפרס נובל"               (fits nobody)
-  BAD: "להיות הכי עצלן"                (an insult, not a scene)
+  GOOD: "מי מדבר הכי הרבה בסעודת שבת?"
+  BAD: "מי מרצה על חשיבות הסדר בבית?"   (nobody lectures; they nag)
+  GOOD: "מי מעיר לכולם על הבלגן בסלון?"
+  BAD: "מי הכי נחמד?"                  (abstract, not a scene)
+  BAD: "מי יזכה בפרס נובל?"             (fits nobody)
+  BAD: "מי הכי עצלן?"                  (an insult, not a scene)
 
 TONE — this is a party game, not a survey. Items should make the room laugh,
 not just nod. Mix these registers across the set instead of writing thirteen
@@ -363,26 +391,32 @@ of the same kind:
 
   • gentle absurdity — treating an object or a machine like a person. This is
     the funniest register and the most underused:
-      "להתווכח עם הוויז על הדרך הכי קצרה"
-      "להסביר למכונת הכביסה מה היא עשתה לא בסדר"
-      "לנהל משא ומתן עם התנור"
+      "מי מתווכח עם הוויז על הדרך הכי קצרה?"
+      "מי מסביר למכונת הכביסה מה היא עשתה לא בסדר?"
+      "מי הכי סביר לנהל משא ומתן עם התנור?"
   • caught in the act — the small thing everyone does and nobody admits:
-      "לטעום מהסיר ולהגיד שלא נגע"
-      "להיעלם בדיוק כשמתחילים לפנות"
+      "מי טועם מהסיר ואומר שלא נגע?"
+      "מי נעלם בדיוק כשמתחילים לפנות את השולחן?"
   • stubborn conviction — absolute certainty about something tiny:
-      "להתעקש שהדרך הזאת קצרה בשתי דקות"
+      "מי בטוח שהדרך הזאת קצרה בשתי דקות?"
+  • the concrete tally — a countable thing you can look at and argue over.
+    This shape is easy to forget and it always works:
+      "למי יש הכי הרבה נעליים בכניסה?"
+      "למי יש הכי הרבה דברים שכוחים ברכב?"
+      "אצל מי הכי הרבה כוסות בחדר?"
   • everyday blunders out in the world — driving, parking, errands, queues.
     Do NOT keep every item inside the house; half of family life happens out:
-      "לנסוע נגד כיוון התנועה בלי לשים לב"
-      "לחפש את החניה שהרכב חונה בה"
-      "לחזור מהמכולת בלי הדבר שבשבילו הלכו"
+      "מי נסע נגד כיוון התנועה בלי לשים לב?"
+      "מי חוזר מהמכולת בלי הדבר שבשבילו הלך?"
+      "מי הכי סביר לחפש את החניה שהרכב עומד בה?"
   • warm and affectionate — not every item should tease:
-      "להיות הראשון להתלהב ממתנה קטנה"
+      "מי הראשון להתלהב ממתנה קטנה?"
+      "על מי הכי אפשר לסמוך כשצריך עזרה ברגע האחרון?"
 
 Aim for roughly a third absurd, a third caught-in-the-act, and the rest split
-between conviction and warmth. An item nobody smiles at is a wasted round.
-Absurd does NOT mean invented: arguing with Waze is funny because it really
-happens. Keep every item inside real family life.
+between tallies, conviction and warmth. An item nobody smiles at is a wasted
+round. Absurd does NOT mean invented: arguing with Waze is funny because it
+really happens. Keep every item inside real family life.
 
 SPREAD the items roughly evenly across these axes. AT MOST half may be set at
 home — the rest must happen out in the world, or the game feels claustrophobic:
@@ -405,26 +439,31 @@ home — the rest must happen out in the world, or the game feels claustrophobic
   • generational habits — hoarding plastic bags, calling instead of texting
   • warm traits — first to clear the table, most excited by a small gift
 
-CRITICAL — the vote must be a real argument. A statement is WORTHLESS if the
+CRITICAL — the vote must be a real argument. A question is WORTHLESS if the
 family already knows the answer, and there are two ways you can ruin it:
 
-1. Never name a person inside the statement. Not as the answer, not as the
+1. Never name a person inside the question. Not as the answer, not as the
    object. Any name narrows the vote.
-   BAD: "מי הכי סביר שיתווכח עם יוסי?"   (now it is about יוסי, not about us)
+   BAD: "מי הכי סביר להתווכח עם יוסי?"   (now it is about יוסי, not about us)
 
-2. Never turn something a player already told us into a statement. If someone
-   wrote "אני מארגנת הכל ברשימות", then "מי הכי סביר שיכין רשימה?" is a dead
+2. Never turn something a player already told us into a question. If someone
+   wrote "אני מארגנת הכל ברשימות", then "מי מכין רשימה לכל דבר?" is a dead
    round — everyone votes for her, there is nothing to discuss. The same goes
    for anything the survey questions or survey answers already established.
    Those are settled facts. Settled facts make bad votes.
 
 So use the notes for the WORLD this family lives in — their situations, their
-objects, their kind of evening — and then write a behaviour that at least three
-of them could plausibly be guilty of.
+objects, their kind of evening — and then ask about a behaviour that at least
+three of them could plausibly be guilty of.
    Notes mention fighting over dishes and a crowded Friday dinner
-   BAD:  "מי הכי סביר שיתחמק משטיפת כלים?"     (already established, dead vote)
-   GOOD: "מי הכי סביר שיתחיל לפנות את השולחן לפני שכולם סיימו לאכול?"
-   GOOD: "מי הכי סביר שיישבע שהוא מלא ואז יאכל עוד קינוח?"
+   BAD:  "מי מתחמק משטיפת כלים?"         (already established, dead vote)
+   GOOD: "מי מתחיל לפנות את השולחן לפני שכולם סיימו לאכול?"
+   GOOD: "מי מכריז שאין מקום לעוד ביס ואז לוקח קינוח?"
+
+FINAL CHECK before you return the set: read your questions in order, top to
+bottom. If two of them open with the same word, rewrite one. If more than a
+third of them contain "הכי סביר", rewrite them. If they all have the same
+rhythm, you have written one question many times — start over on the repeats.
 
 ════════ "numberQuestions" — מה המספר? ════════
 CRITICAL: this question is shown privately to ONE player, and it asks about
@@ -500,7 +539,11 @@ are used elsewhere in the game and quoting them would spoil that round.`
     : "The survey produced no usable answers, so rely on the description alone.";
 
   const user = `
-Write ${counts.mostLikely + 5} "mostLikely" statements and ${counts.numbers + 3} "numberQuestions" for one game.
+Write ${counts.mostLikely + 5} "mostLikely" questions and ${counts.numbers + 3} "numberQuestions" for one game.
+
+The "mostLikely" questions are read one after another by the same family in one
+sitting, so they must not sound alike. Deliberately use a different opening word
+and a different sentence shape for each one.
 
 ${familyBlock(familyDescription, GENERIC_NOTE)}
 
@@ -522,7 +565,7 @@ ${varietyBlock(usedQuestions)}
   };
 
   const result: GeneratedRounds = {
-    mostLikely: pick(parsed.mostLikely, counts.mostLikely, 9),
+    mostLikely: spreadOpenings(pick(parsed.mostLikely, counts.mostLikely + 6, 12), counts.mostLikely),
     numberQuestions: pick(parsed.numberQuestions, counts.numbers, 10),
   };
 
@@ -1099,6 +1142,48 @@ function isTangled(text: string, maxWords: number): boolean {
 
 function hasSlang(text: string): boolean {
   return tokens(text).map(strip).some((w) => SLANG_WORDS.has(w));
+}
+
+/**
+ * Asking for variety is not enough — the model still drifts back to one
+ * favourite phrasing and writes it ten times. This is the part that actually
+ * stops "מי הכי סביר" appearing round after round.
+ *
+ * Items are taken in order, but an opening that has already been used twice
+ * goes to the back of the queue. Only if that leaves the game short of rounds
+ * do the repeats come back in — a repeated opening is still better than a
+ * missing round.
+ */
+function spreadOpenings(items: string[], want: number): string[] {
+  const MAX_PER_OPENING = 2;
+  const used = new Map<string, number>();
+  const chosen: string[] = [];
+  const deferred: string[] = [];
+
+  for (const item of items) {
+    const key = openingKey(item);
+    const count = used.get(key) ?? 0;
+    if (count >= MAX_PER_OPENING) {
+      deferred.push(item);
+      continue;
+    }
+    used.set(key, count + 1);
+    chosen.push(item);
+    if (chosen.length >= want) return chosen;
+  }
+
+  return [...chosen, ...deferred].slice(0, want);
+}
+
+/**
+ * What the family hears as "the same question again" is the opening — the first
+ * two words, plus "הכי סביר" wherever it sits, which is the phrasing that
+ * dominates if left alone.
+ */
+function openingKey(text: string): string {
+  const words = tokens(text).map(strip);
+  if (words.includes("סביר")) return "הכי סביר";
+  return words.slice(0, 2).join(" ");
 }
 
 /** Order by how easily an item reads: short and single-clause first. */
